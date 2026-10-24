@@ -1,4 +1,4 @@
-﻿import { FinanceData } from '../types/finance';
+import { FinanceData } from '../types/finance';
 
 export const DEFAULT_CATEGORIES = [
   { id: 'cat-income', name: 'Income', icon: 'Briefcase', color: '#10b981', type: 'income' as const },

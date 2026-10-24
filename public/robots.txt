@@ -1,4 +1,4 @@
-﻿User-agent: *
+User-agent: *
 Allow: /
 
 Sitemap: https://finance-tracker-umber-eight-35.vercel.app/sitemap.xml
