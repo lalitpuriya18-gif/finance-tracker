@@ -19,12 +19,11 @@ export const MonthlyFinancialSummary: React.FC = () => {
   const { transactions, settings } = useFinanceStore();
   const [isExpanded, setIsExpanded] = useState(false);
 
-  // October 2023 transactions
-  const now = new Date(2023, 9, 25); // Oct 2023 reference
-  const currentMonthTx = getMonthTransactions(transactions, now);
+  const currentMonthTx = transactions;
   const { income, expense, net, savingsRate } = calculateTotals(currentMonthTx);
 
-  const isDeficit = expense > income || (income === 0 && expense > 0);
+  const hasActivity = income > 0 || expense > 0;
+  const isDeficit = hasActivity && (expense > income || (income === 0 && expense > 0));
 
   return (
     <Card className="rounded-2xl p-5 border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs">
@@ -39,14 +38,18 @@ export const MonthlyFinancialSummary: React.FC = () => {
               Monthly Financial Summary
             </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              Consolidated cash flow for October 2023 based on live transactions
+              Consolidated cash flow based on live transactions
             </p>
           </div>
         </div>
 
-        {/* Right: Status Badges (Deficit Alert / Healthy Surplus, Entries Count) */}
+        {/* Right: Status Badges (Deficit Alert / Healthy Surplus / No Activity, Entries Count) */}
         <div className="flex items-center gap-2 self-start sm:self-auto">
-          {isDeficit ? (
+          {!hasActivity ? (
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-xs font-semibold shadow-2xs">
+              No Activity
+            </span>
+          ) : isDeficit ? (
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-400 text-xs font-bold shadow-2xs">
               <span className="w-1.5 h-1.5 rounded-full bg-rose-600 animate-pulse" />
               Deficit Alert
@@ -59,7 +62,7 @@ export const MonthlyFinancialSummary: React.FC = () => {
           )}
 
           <span className="px-2.5 py-1 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-semibold tabular-nums">
-            {currentMonthTx.length} {currentMonthTx.length === 1 ? 'entries' : 'entries'}
+            {currentMonthTx.length} {currentMonthTx.length === 1 ? 'entry' : 'entries'}
           </span>
 
           <button

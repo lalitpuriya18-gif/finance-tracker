@@ -12,33 +12,7 @@ export const BudgetQuickList: React.FC = () => {
 
   const calculatedBudgets = useMemo(() => {
     if (!budgets || budgets.length === 0) {
-      return [
-        {
-          category: 'Food & Dining',
-          percent: 73,
-          spent: '₹21,860 spent',
-          cap: '₹30,000 cap',
-          isWarning: false,
-          color: 'bg-emerald-600',
-        },
-        {
-          category: 'Transport',
-          percent: 55,
-          spent: '₹8,200 spent',
-          cap: '₹15,000 cap',
-          isWarning: false,
-          color: 'bg-emerald-600',
-        },
-        {
-          category: 'Shopping',
-          percent: 95,
-          spent: '₹14,250 spent',
-          cap: '₹15,000 cap',
-          isWarning: true,
-          badge: 'NEAR LIMIT',
-          color: 'bg-rose-500',
-        },
-      ];
+      return [];
     }
 
     return budgets.slice(0, 3).map((b) => {
@@ -86,40 +60,55 @@ export const BudgetQuickList: React.FC = () => {
           Spending velocity for current billing cycle
         </p>
 
-        <div className="space-y-5 mt-5">
-          {calculatedBudgets.map((b, i) => (
-            <div key={i} className="space-y-1.5">
-              <div className="flex items-center justify-between text-xs">
-                <div className="flex items-center gap-2">
-                  <span className="font-bold text-slate-900 dark:text-slate-100">
-                    {b.category}
-                  </span>
-                  {b.badge && (
-                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900">
-                      {b.badge}
+        {calculatedBudgets.length === 0 ? (
+          <div className="text-center py-6 space-y-2">
+            <p className="text-xs font-semibold text-slate-500">No active category budgets yet.</p>
+            <p className="text-[11px] text-slate-400 max-w-[200px] mx-auto">
+              Set spending limits for your categories to track pace.
+            </p>
+            <Link
+              to="/budgets"
+              className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 text-xs font-semibold hover:bg-emerald-100 dark:hover:bg-emerald-900/60 transition-colors"
+            >
+              + Create Budget
+            </Link>
+          </div>
+        ) : (
+          <div className="space-y-5 mt-5">
+            {calculatedBudgets.map((b, i) => (
+              <div key={i} className="space-y-1.5">
+                <div className="flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-slate-900 dark:text-slate-100">
+                      {b.category}
                     </span>
-                  )}
+                    {b.badge && (
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900">
+                        {b.badge}
+                      </span>
+                    )}
+                  </div>
+                  <span className={`font-bold tabular-nums ${b.isWarning ? 'text-rose-600' : 'text-emerald-700 dark:text-emerald-400'}`}>
+                    {b.percent}% used
+                  </span>
                 </div>
-                <span className={`font-bold tabular-nums ${b.isWarning ? 'text-rose-600' : 'text-emerald-700 dark:text-emerald-400'}`}>
-                  {b.percent}% used
-                </span>
-              </div>
 
-              {/* Progress Bar */}
-              <div className="w-full bg-slate-100 dark:bg-slate-800 h-2 rounded-full overflow-hidden">
-                <div
-                  className={`h-full rounded-full transition-all duration-500 ${b.color}`}
-                  style={{ width: `${b.percent}%` }}
-                />
-              </div>
+                {/* Progress Bar */}
+                <div className="w-full bg-slate-100 dark:bg-slate-800 h-2 rounded-full overflow-hidden">
+                  <div
+                    className={`h-full rounded-full transition-all duration-500 ${b.color}`}
+                    style={{ width: `${b.percent}%` }}
+                  />
+                </div>
 
-              <div className="flex items-center justify-between text-[11px] text-slate-400 font-medium">
-                <span>{b.spent}</span>
-                <span>{b.cap}</span>
+                <div className="flex items-center justify-between text-[11px] text-slate-400 font-medium">
+                  <span>{b.spent}</span>
+                  <span>{b.cap}</span>
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="pt-6">

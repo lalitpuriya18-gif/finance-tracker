@@ -11,18 +11,18 @@ import { PlusCircle, RefreshCw } from 'lucide-react';
 export const DashboardPage: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const { addToast } = useFinanceStore();
+  const { settings, addToast } = useFinanceStore();
   const [isSyncing, setIsSyncing] = useState(false);
-  const [syncTime, setSyncTime] = useState('12m ago');
+  const [syncTime, setSyncTime] = useState('just now');
 
   const handleSync = () => {
     setIsSyncing(true);
     setTimeout(() => {
       setIsSyncing(false);
-      setSyncTime('Just now');
+      setSyncTime('just now');
       addToast({
         title: 'Accounts Synced',
-        description: 'Successfully updated balances from ICICI Bank, HDFC Card, and Paytm UPI.',
+        description: 'Successfully checked and reconciled all linked account balances.',
         type: 'success',
       });
     }, 700);
@@ -30,14 +30,14 @@ export const DashboardPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Top Banner: Welcome back, Arjun + Action */}
+      {/* Top Banner: Dynamic Welcome + Action */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl md:text-3xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight flex items-center gap-2">
-            Welcome back, Arjun <span>👋</span>
+            Welcome back, {settings.userName || 'FinTrack User'} <span>👋</span>
           </h2>
           <p className="text-xs md:text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Here's your consolidated financial overview for October 2023
+            Here's your consolidated personal finance overview
           </p>
         </div>
 

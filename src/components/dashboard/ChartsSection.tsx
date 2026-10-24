@@ -19,47 +19,36 @@ import { Info } from 'lucide-react';
 export const ChartsSection: React.FC = () => {
   const { transactions, categories, settings } = useFinanceStore();
 
-  // 6-Month operational cashflow data calculated from transactions with Stitch fallback
+  // 6-Month operational cashflow data calculated dynamically from transactions
   const cashflowData = useMemo(() => {
-    const months = [
-      { key: '2023-05', label: 'May 23', defaultInc: 140000, defaultExp: 62000 },
-      { key: '2023-06', label: 'Jun 23', defaultInc: 142000, defaultExp: 64000 },
-      { key: '2023-07', label: 'Jul 23', defaultInc: 141000, defaultExp: 65000 },
-      { key: '2023-08', label: 'Aug 23', defaultInc: 144000, defaultExp: 66000 },
-      { key: '2023-09', label: 'Sep 23', defaultInc: 143000, defaultExp: 67000 },
-      { key: '2023-10', label: 'Oct 23 (Current)', defaultInc: 145000, defaultExp: 68320 },
-    ];
+    const list = [];
+    const now = new Date();
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      const label = d.toLocaleDateString('en-GB', { month: 'short' });
 
-    return months.map((m) => {
-      const monthTxs = transactions.filter((t) => t.date && t.date.startsWith(m.key));
-      if (monthTxs.length > 0) {
-        const inc = monthTxs.filter((t) => t.type === 'income').reduce((s, t) => s + t.amount, 0) / 100;
-        const exp = monthTxs.filter((t) => t.type === 'expense').reduce((s, t) => s + t.amount, 0) / 100;
-        return {
-          month: m.label,
-          income: inc > 0 ? Math.round(inc) : m.defaultInc,
-          expense: exp > 0 ? Math.round(exp) : m.defaultExp,
-        };
-      }
-      return {
-        month: m.label,
-        income: m.defaultInc,
-        expense: m.defaultExp,
-      };
-    });
+      const monthTxs = transactions.filter((t) => t.date && t.date.startsWith(key));
+      const inc = monthTxs.filter((t) => t.type === 'income').reduce((s, t) => s + t.amount, 0) / 100;
+      const exp = monthTxs.filter((t) => t.type === 'expense').reduce((s, t) => s + t.amount, 0) / 100;
+
+      list.push({
+        month: label,
+        income: Math.round(inc),
+        expense: Math.round(exp),
+      });
+    }
+    return list;
   }, [transactions]);
 
-  // Category donut allocation data matching real expenses with fallback
+  // Category donut allocation data matching real expenses
   const { categoryData, totalSpendPaise } = useMemo(() => {
-    // Current month expenses
-    const octExpenses = transactions.filter(
-      (t) => t.type === 'expense' && (t.date.startsWith('2023-10') || transactions.length < 25)
-    );
+    const expenses = transactions.filter((t) => t.type === 'expense');
 
     const spendMap = new Map<string, number>();
     let total = 0;
 
-    for (const t of octExpenses) {
+    for (const t of expenses) {
       const catId = t.categoryId || 'other';
       spendMap.set(catId, (spendMap.get(catId) || 0) + t.amount);
       total += t.amount;
@@ -67,15 +56,8 @@ export const ChartsSection: React.FC = () => {
 
     if (total === 0 || spendMap.size === 0) {
       return {
-        categoryData: [
-          { name: 'Food & Dining', percent: '32%', value: 21860, color: '#10b981' },
-          { name: 'Rent', percent: '28%', value: 19130, color: '#1e293b' },
-          { name: 'Shopping', percent: '14%', value: 9560, color: '#f43f5e' },
-          { name: 'Transport', percent: '12%', value: 8200, color: '#06b6d4' },
-          { name: 'Bills', percent: '9%', value: 6150, color: '#3b82f6' },
-          { name: 'Entertainment', percent: '5%', value: 3440, color: '#8b5cf6' },
-        ],
-        totalSpendPaise: 6834000,
+        categoryData: [],
+        totalSpendPaise: 0,
       };
     }
 
@@ -205,56 +187,67 @@ export const ChartsSection: React.FC = () => {
             </Link>
           </div>
           <p className="text-xs text-slate-400 mt-0.5">
-            Allocation breakdown for October
+            Live expense distribution
           </p>
         </div>
 
-        {/* Donut with Center Text */}
-        <div className="relative h-44 w-full flex items-center justify-center my-2">
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Pie
-                data={categoryData}
-                cx="50%"
-                cy="50%"
-                innerRadius={54}
-                outerRadius={76}
-                paddingAngle={2}
-                dataKey="value"
-              >
-                {categoryData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color} />
-                ))}
-              </Pie>
-            </PieChart>
-          </ResponsiveContainer>
-
-          <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-              Total Spend
-            </span>
-            <span className="text-base font-extrabold text-slate-900 dark:text-slate-100 tabular-nums">
-              {formatMoney(totalSpendPaise, settings.currency)}
-            </span>
+        {categoryData.length === 0 ? (
+          <div className="h-56 flex flex-col items-center justify-center text-center p-4">
+            <span className="text-xs font-semibold text-slate-500">No expense records yet</span>
+            <p className="text-[11px] text-slate-400 mt-1 max-w-[200px]">
+              Add expense transactions to visualize your category spending distribution.
+            </p>
           </div>
-        </div>
+        ) : (
+          <>
+            {/* Donut with Center Text */}
+            <div className="relative h-44 w-full flex items-center justify-center my-2">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={categoryData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={54}
+                    outerRadius={76}
+                    paddingAngle={2}
+                    dataKey="value"
+                  >
+                    {categoryData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                </PieChart>
+              </ResponsiveContainer>
 
-        {/* 2-Column Legend */}
-        <div className="grid grid-cols-2 gap-x-4 gap-y-2 pt-2 border-t border-slate-100 dark:border-slate-800 text-xs">
-          {categoryData.map((cat, i) => (
-            <div key={i} className="flex items-center justify-between">
-              <div className="flex items-center gap-1.5 min-w-0">
-                <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: cat.color }} />
-                <span className="text-slate-600 dark:text-slate-300 font-medium truncate max-w-[85px] text-[11px]">
-                  {cat.name}
+              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                  Total Spend
+                </span>
+                <span className="text-base font-extrabold text-slate-900 dark:text-slate-100 tabular-nums">
+                  {formatMoney(totalSpendPaise, settings.currency)}
                 </span>
               </div>
-              <span className="font-bold text-slate-900 dark:text-slate-100 text-[11px] tabular-nums">
-                {cat.percent}
-              </span>
             </div>
-          ))}
-        </div>
+
+            {/* 2-Column Legend */}
+            <div className="grid grid-cols-2 gap-x-4 gap-y-2 pt-2 border-t border-slate-100 dark:border-slate-800 text-xs">
+              {categoryData.map((cat, i) => (
+                <div key={i} className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: cat.color }} />
+                    <span className="text-slate-600 dark:text-slate-300 font-medium truncate max-w-[85px] text-[11px]">
+                      {cat.name}
+                    </span>
+                  </div>
+                  <span className="font-bold text-slate-900 dark:text-slate-100 text-[11px] tabular-nums">
+                    {cat.percent}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
       </Card>
     </div>
   );

@@ -12,7 +12,7 @@ import {
   Settings,
   FinanceData,
 } from '../src/types/finance';
-import { getSeedData } from '../src/lib/seedData';
+import { getSeedData, DEFAULT_CATEGORIES } from '../src/lib/seedData';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -177,10 +177,29 @@ export function initDb() {
     );
   `);
 
-  // Auto-seed if empty
-  const accountCount = db.prepare('SELECT COUNT(*) as count FROM accounts').get() as { count: number };
-  if (accountCount.count === 0) {
-    seedDatabase('user-default');
+  // Initialize default categories if none exist
+  const catCount = db.prepare('SELECT COUNT(*) as count FROM categories').get() as { count: number };
+  if (catCount.count === 0) {
+    seedDefaultCategories('user-default');
+  }
+
+  // Initialize default settings if none exist
+  const settingsCount = db.prepare('SELECT COUNT(*) as count FROM settings').get() as { count: number };
+  if (settingsCount.count === 0) {
+    db.prepare(`
+      INSERT OR REPLACE INTO settings (user_id, currency, theme, month_start_day, user_name, user_email, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).run('user-default', 'INR', 'light', 1, 'FinTrack User', 'user@fintrack.io', new Date().toISOString());
+  }
+}
+
+export function seedDefaultCategories(userId = 'user-default') {
+  const insertCat = db.prepare(`
+    INSERT OR REPLACE INTO categories (id, user_id, name, icon, color, type, is_archived, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+  for (const cat of DEFAULT_CATEGORIES) {
+    insertCat.run(cat.id, userId, cat.name, cat.icon, cat.color, cat.type, 0, new Date().toISOString());
   }
 }
 
@@ -354,8 +373,8 @@ export function getFullBootstrap(userId = 'user-default'): FinanceData & { notif
         currency: 'INR',
         theme: 'light',
         monthStartDay: 1,
-        userName: 'Arjun Mehta',
-        userEmail: 'arjun@fintrack.io',
+        userName: 'FinTrack User',
+        userEmail: 'user@fintrack.io',
       };
 
   // Accounts
@@ -725,8 +744,8 @@ export function dbUpdateSettings(updates: Partial<Settings>, userId = 'user-defa
   const currency = updates.currency || existing?.currency || 'INR';
   const theme = updates.theme || existing?.theme || 'light';
   const monthStartDay = updates.monthStartDay || existing?.month_start_day || 1;
-  const userName = updates.userName || existing?.user_name || 'Arjun Mehta';
-  const userEmail = updates.userEmail || existing?.user_email || 'arjun@fintrack.io';
+  const userName = updates.userName || existing?.user_name || 'FinTrack User';
+  const userEmail = updates.userEmail || existing?.user_email || 'user@fintrack.io';
 
   db.prepare(`
     INSERT OR REPLACE INTO settings (user_id, currency, theme, month_start_day, user_name, user_email, updated_at)
@@ -754,4 +773,16 @@ export function dbClearAll(userId = 'user-default') {
   db.prepare('DELETE FROM budgets WHERE user_id = ?').run(userId);
   db.prepare('DELETE FROM goals WHERE user_id = ?').run(userId);
   db.prepare('DELETE FROM mandates WHERE user_id = ?').run(userId);
+  db.prepare('DELETE FROM notifications WHERE user_id = ?').run(userId);
+
+  db.prepare(`
+    INSERT OR REPLACE INTO settings (user_id, currency, theme, month_start_day, user_name, user_email, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `).run(userId, 'INR', 'light', 1, 'FinTrack User', 'user@fintrack.io', new Date().toISOString());
+
+  // Ensure standard categories exist so user can immediately create transactions
+  const catCount = db.prepare('SELECT COUNT(*) as count FROM categories WHERE user_id = ?').get(userId) as { count: number };
+  if (catCount.count === 0) {
+    seedDefaultCategories(userId);
+  }
 }

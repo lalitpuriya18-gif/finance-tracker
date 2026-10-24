@@ -121,14 +121,19 @@ export const Sidebar: React.FC<SidebarProps> = ({ isMobile }) => {
               className="flex items-center gap-2.5 min-w-0 hover:opacity-80 transition-opacity"
             >
               <div className="w-8 h-8 rounded-full bg-emerald-700 text-white flex items-center justify-center font-bold text-xs shrink-0 overflow-hidden shadow-xs">
-                AM
+                {(settings.userName || 'FinTrack User')
+                  .split(' ')
+                  .map((n) => n[0])
+                  .join('')
+                  .slice(0, 2)
+                  .toUpperCase() || 'FT'}
               </div>
               <div className="min-w-0 text-left">
                 <p className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate">
-                  {settings.userName || 'Arjun Mehta'}
+                  {settings.userName || 'FinTrack User'}
                 </p>
                 <p className="text-[10px] text-slate-400 dark:text-slate-500 truncate">
-                  {settings.userEmail || 'arjun@fintrack.io'}
+                  {settings.userEmail || 'user@fintrack.io'}
                 </p>
               </div>
             </NavLink>

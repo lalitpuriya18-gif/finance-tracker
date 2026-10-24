@@ -48,7 +48,7 @@ export class BackendStorageProvider implements IStorageProvider {
   async loadData(): Promise<FinanceData | null> {
     try {
       const data = await api.getBootstrap();
-      if (data && data.accounts && data.accounts.length > 0) {
+      if (data && typeof data === 'object') {
         // Cache to local storage
         await this.localFallback.saveData(data);
         return data;

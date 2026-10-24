@@ -8,17 +8,17 @@ import { calculateTotals, calculateAccountBalances, getMonthTransactions } from 
 export const KpiCards: React.FC = () => {
   const { accounts, transactions, settings } = useFinanceStore();
 
-  const now = new Date(2023, 9, 25);
-  const monthTx = getMonthTransactions(transactions, now);
-  const { income, expense, savingsRate } = calculateTotals(monthTx);
+  const hasAccounts = accounts.length > 0;
+  const hasTransactions = transactions.length > 0;
+
   const balances = calculateAccountBalances(accounts, transactions);
   const totalBalance = Object.values(balances).reduce((sum, b) => sum + b, 0);
 
-  // If there are transactions, use the live calculated totals;
-  // If the dataset is pristine Arjun Mehta seed, it matches ₹4,82,450.00 / ₹1,45,000.00 / ₹68,320.00 / 52.8%
-  const displayTotal = totalBalance > 0 ? totalBalance : 48245000;
-  const displayIncome = income > 0 || transactions.length === 0 ? income : income;
-  const displayExpense = expense > 0 || transactions.length === 0 ? expense : expense;
+  const { income, expense, savingsRate } = calculateTotals(transactions);
+
+  const displayTotal = totalBalance;
+  const displayIncome = income;
+  const displayExpense = expense;
   const displaySavingsRate = income > 0 ? savingsRate : 0;
 
   return (
@@ -41,12 +41,20 @@ export const KpiCards: React.FC = () => {
         </div>
 
         <div className="mt-2.5 flex items-center gap-1.5 text-xs">
-          <span className="inline-flex items-center px-1.5 py-0.5 rounded-md font-semibold text-[11px] text-emerald-700 bg-emerald-50 dark:text-emerald-400 dark:bg-emerald-950/50">
-            ↗ +12.4%
-          </span>
-          <span className="text-slate-400 dark:text-slate-500 text-[11px]">
-            vs last month
-          </span>
+          {hasAccounts ? (
+            <>
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded-md font-semibold text-[11px] text-emerald-700 bg-emerald-50 dark:text-emerald-400 dark:bg-emerald-950/50">
+                ● Live
+              </span>
+              <span className="text-slate-400 dark:text-slate-500 text-[11px]">
+                {accounts.length} {accounts.length === 1 ? 'account' : 'accounts'} linked
+              </span>
+            </>
+          ) : (
+            <span className="text-slate-400 dark:text-slate-500 text-[11px]">
+              No accounts linked
+            </span>
+          )}
         </div>
       </Card>
 
@@ -68,12 +76,20 @@ export const KpiCards: React.FC = () => {
         </div>
 
         <div className="mt-2.5 flex items-center gap-1.5 text-xs">
-          <span className="inline-flex items-center px-1.5 py-0.5 rounded-md font-semibold text-[11px] text-emerald-700 bg-emerald-50 dark:text-emerald-400 dark:bg-emerald-950/50">
-            ↗ +5.2%
-          </span>
-          <span className="text-slate-400 dark:text-slate-500 text-[11px]">
-            vs last month
-          </span>
+          {hasTransactions && displayIncome > 0 ? (
+            <>
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded-md font-semibold text-[11px] text-emerald-700 bg-emerald-50 dark:text-emerald-400 dark:bg-emerald-950/50">
+                ↗ Inflow
+              </span>
+              <span className="text-slate-400 dark:text-slate-500 text-[11px]">
+                from ledger
+              </span>
+            </>
+          ) : (
+            <span className="text-slate-400 dark:text-slate-500 text-[11px]">
+              No income logged
+            </span>
+          )}
         </div>
       </Card>
 
@@ -95,12 +111,20 @@ export const KpiCards: React.FC = () => {
         </div>
 
         <div className="mt-2.5 flex items-center gap-1.5 text-xs">
-          <span className="inline-flex items-center px-1.5 py-0.5 rounded-md font-semibold text-[11px] text-emerald-700 bg-emerald-50 dark:text-emerald-400 dark:bg-emerald-950/50">
-            ↘ -3.8%
-          </span>
-          <span className="text-slate-400 dark:text-slate-500 text-[11px]">
-            less spend
-          </span>
+          {hasTransactions && displayExpense > 0 ? (
+            <>
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded-md font-semibold text-[11px] text-rose-700 bg-rose-50 dark:text-rose-400 dark:bg-rose-950/50">
+                ↘ Outflow
+              </span>
+              <span className="text-slate-400 dark:text-slate-500 text-[11px]">
+                current cycle
+              </span>
+            </>
+          ) : (
+            <span className="text-slate-400 dark:text-slate-500 text-[11px]">
+              No expenses logged
+            </span>
+          )}
         </div>
       </Card>
 
@@ -123,12 +147,20 @@ export const KpiCards: React.FC = () => {
         </div>
 
         <div className="mt-2.5 flex items-center gap-1.5 text-xs">
-          <span className="inline-flex items-center px-1.5 py-0.5 rounded-md font-semibold text-[11px] text-emerald-700 bg-emerald-50 dark:text-emerald-400 dark:bg-emerald-950/50">
-            ↗ +4.1%
-          </span>
-          <span className="text-slate-400 dark:text-slate-500 text-[11px]">
-            above goal
-          </span>
+          {hasTransactions && income > 0 ? (
+            <>
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded-md font-semibold text-[11px] text-emerald-700 bg-emerald-50 dark:text-emerald-400 dark:bg-emerald-950/50">
+                ↗ {displaySavingsRate}%
+              </span>
+              <span className="text-slate-400 dark:text-slate-500 text-[11px]">
+                savings velocity
+              </span>
+            </>
+          ) : (
+            <span className="text-slate-400 dark:text-slate-500 text-[11px]">
+              Target: 50%
+            </span>
+          )}
         </div>
       </Card>
     </div>

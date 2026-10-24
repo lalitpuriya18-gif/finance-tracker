@@ -380,8 +380,24 @@ export const BudgetsPage: React.FC = () => {
       </div>
 
       {/* Category Allocation Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {budgetList.map((item) => {
+      {budgetList.length === 0 ? (
+        <Card className="p-12 text-center rounded-2xl border border-dashed border-slate-300 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 space-y-3">
+          <SlidersHorizontal className="w-10 h-10 text-slate-300 dark:text-slate-600 mx-auto" />
+          <h3 className="text-base font-bold text-slate-800 dark:text-slate-200">No Category Budgets Yet</h3>
+          <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto">
+            Set monthly spending limits for categories like Food, Utilities, Shopping, or Transport to stay within your targets.
+          </p>
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="inline-flex items-center gap-2 px-4 py-2 text-xs font-bold text-white bg-[#065f46] hover:bg-[#054c37] rounded-xl shadow-xs transition-all active:scale-[0.98]"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Create First Budget</span>
+          </button>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {budgetList.map((item) => {
           const Icon = item.icon;
           const radius = 24;
           const stroke = 4;
@@ -554,7 +570,8 @@ export const BudgetsPage: React.FC = () => {
             </Card>
           );
         })}
-      </div>
+        </div>
+      )}
 
       {/* Bottom Section: Spend Velocity Chart (2/3) + Advisory Insights (1/3) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">

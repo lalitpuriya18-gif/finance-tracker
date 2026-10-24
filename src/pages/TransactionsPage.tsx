@@ -59,14 +59,14 @@ export const TransactionsPage: React.FC = () => {
       if (t.type === 'income') inflowSum += t.amount;
       if (t.type === 'expense') outflowSum += t.amount;
     }
-    const ratio = inflowSum > 0 ? (((inflowSum - outflowSum) / inflowSum) * 100).toFixed(1) : '52.8';
+    const ratio = inflowSum > 0 ? (((inflowSum - outflowSum) / inflowSum) * 100).toFixed(1) : '0.0';
     return {
       inflow: `₹${(inflowSum / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
-      inflowChange: '+14.2% vs Sep',
+      inflowChange: inflowSum > 0 ? 'Total received' : 'No records yet',
       outflow: `₹${(outflowSum / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
-      outflowChange: '↓ ₹8,420 below cap',
+      outflowChange: outflowSum > 0 ? 'Total disbursed' : 'No records yet',
       savingsRatio: `${ratio}%`,
-      savingsTarget: 'Target: 65.0%',
+      savingsTarget: 'Target: 50.0%',
       audits: '0 Flagged',
       auditsStatus: '✓ Ledger synchronized',
     };
@@ -507,8 +507,19 @@ export const TransactionsPage: React.FC = () => {
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
               {paginated.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="p-8 text-center text-slate-400 text-xs">
-                    No transactions match your current filters.
+                  <td colSpan={8} className="p-12 text-center text-slate-400 text-xs">
+                    <p className="font-semibold text-slate-600 dark:text-slate-300 mb-1">No transactions recorded yet.</p>
+                    <p className="text-slate-400 max-w-xs mx-auto mb-3">Click "Add Transaction" above or import a statement CSV to populate your ledger.</p>
+                    <button
+                      onClick={() => {
+                        setEditingTx(null);
+                        setIsModalOpen(true);
+                      }}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#065f46] hover:bg-[#054c37] text-white text-xs font-semibold shadow-xs"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Add Transaction</span>
+                    </button>
                   </td>
                 </tr>
               ) : (

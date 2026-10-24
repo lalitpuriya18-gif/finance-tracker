@@ -14,37 +14,19 @@ export const Header: React.FC<HeaderProps> = ({ onOpenAddTransaction, onToggleSi
   const [isGoogleModalOpen, setIsGoogleModalOpen] = useState(false);
   const [isSignedIn, setIsSignedIn] = useState(true);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
-  const [unreadCount, setUnreadCount] = useState(3);
+  const [unreadCount, setUnreadCount] = useState(0);
 
-  const [notifications, setNotifications] = useState([
-    {
-      id: 'notif-1',
-      title: 'Upcoming Subscription Renewal',
-      description: 'Cult.fit Pass (₹14,990) scheduled for auto-debit on Nov 12.',
-      time: '10m ago',
-      type: 'warning',
-      isUnread: true,
-      link: '/reports',
-    },
-    {
-      id: 'notif-2',
-      title: 'Real-time Bank Feed Synchronized',
-      description: 'ICICI Bank, HDFC Card, and Paytm balances successfully updated.',
-      time: '25m ago',
-      type: 'success',
-      isUnread: true,
-      link: '/transactions',
-    },
-    {
-      id: 'notif-3',
-      title: 'Savings Milestone Accelerated',
-      description: 'You maintained a 52.8% savings velocity in October, beating target.',
-      time: '2h ago',
-      type: 'info',
-      isUnread: true,
-      link: '/goals',
-    },
-  ]);
+  interface NotificationItem {
+    id: string;
+    title: string;
+    description: string;
+    time: string;
+    type: 'warning' | 'success' | 'info';
+    isUnread: boolean;
+    link: string;
+  }
+
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
 
   const handleGoogleAuth = () => {
     if (isSignedIn) {
@@ -173,50 +155,58 @@ export const Header: React.FC<HeaderProps> = ({ onOpenAddTransaction, onToggleSi
                 </div>
 
                 <div className="divide-y divide-slate-100 dark:divide-slate-800 max-h-80 overflow-y-auto">
-                  {notifications.map((n) => (
-                    <div
-                      key={n.id}
-                      className={`p-3 text-xs transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/50 ${
-                        n.isUnread ? 'bg-emerald-50/20 dark:bg-emerald-950/10' : ''
-                      }`}
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex items-start gap-2">
-                          {n.type === 'warning' ? (
-                            <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
-                          ) : n.type === 'success' ? (
-                            <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
-                          ) : (
-                            <Sparkles className="w-4 h-4 text-indigo-500 shrink-0 mt-0.5" />
-                          )}
-                          <div>
-                            <p className="font-bold text-slate-800 dark:text-slate-200">
-                              {n.title}
-                            </p>
-                            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">
-                              {n.description}
-                            </p>
-                            <div className="flex items-center gap-3 mt-1.5 text-[10px] text-slate-400">
-                              <span className="flex items-center gap-1">
-                                <Clock className="w-3 h-3" />
-                                {n.time}
-                              </span>
-                              <Link
-                                to={n.link}
-                                onClick={() => setIsNotificationsOpen(false)}
-                                className="font-bold text-emerald-700 dark:text-emerald-400 hover:underline flex items-center gap-0.5"
-                              >
-                                View details <ArrowRight className="w-2.5 h-2.5" />
-                              </Link>
+                  {notifications.length === 0 ? (
+                    <div className="p-8 text-center text-slate-400 dark:text-slate-500 text-xs">
+                      <Bell className="w-6 h-6 mx-auto mb-2 text-slate-300 dark:text-slate-600 opacity-60" />
+                      <p className="font-medium text-slate-600 dark:text-slate-400">No unread notifications</p>
+                      <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">You're all caught up!</p>
+                    </div>
+                  ) : (
+                    notifications.map((n) => (
+                      <div
+                        key={n.id}
+                        className={`p-3 text-xs transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/50 ${
+                          n.isUnread ? 'bg-emerald-50/20 dark:bg-emerald-950/10' : ''
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex items-start gap-2">
+                            {n.type === 'warning' ? (
+                              <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                            ) : n.type === 'success' ? (
+                              <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                            ) : (
+                              <Sparkles className="w-4 h-4 text-indigo-500 shrink-0 mt-0.5" />
+                            )}
+                            <div>
+                              <p className="font-bold text-slate-800 dark:text-slate-200">
+                                {n.title}
+                              </p>
+                              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">
+                                {n.description}
+                              </p>
+                              <div className="flex items-center gap-3 mt-1.5 text-[10px] text-slate-400">
+                                <span className="flex items-center gap-1">
+                                  <Clock className="w-3 h-3" />
+                                  {n.time}
+                                </span>
+                                <Link
+                                  to={n.link}
+                                  onClick={() => setIsNotificationsOpen(false)}
+                                  className="font-bold text-emerald-700 dark:text-emerald-400 hover:underline flex items-center gap-0.5"
+                                >
+                                  View details <ArrowRight className="w-2.5 h-2.5" />
+                                </Link>
+                              </div>
                             </div>
                           </div>
+                          {n.isUnread && (
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0 mt-1" />
+                          )}
                         </div>
-                        {n.isUnread && (
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0 mt-1" />
-                        )}
                       </div>
-                    </div>
-                  ))}
+                    ))
+                  )}
                 </div>
 
                 <div className="p-2 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 text-center">
@@ -280,14 +270,19 @@ export const Header: React.FC<HeaderProps> = ({ onOpenAddTransaction, onToggleSi
 
             <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-emerald-600 text-white font-bold flex items-center justify-center text-sm shadow-xs">
-                AM
+                {(settings.userName || 'FinTrack User')
+                  .split(' ')
+                  .map((n) => n[0])
+                  .join('')
+                  .slice(0, 2)
+                  .toUpperCase() || 'FT'}
               </div>
               <div className="flex-1 min-w-0">
                 <p className="font-bold text-xs text-slate-900 dark:text-slate-100 truncate">
-                  {settings.userName || 'Arjun Mehta'}
+                  {settings.userName || 'FinTrack User'}
                 </p>
                 <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
-                  {settings.userEmail || 'arjun@fintrack.io'}
+                  {settings.userEmail || 'user@fintrack.io'}
                 </p>
               </div>
               <span className="p-1 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400">

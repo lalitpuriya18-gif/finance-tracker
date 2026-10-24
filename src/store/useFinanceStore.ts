@@ -13,7 +13,7 @@ import {
 } from '../types/finance';
 import { storage } from '../lib/storage';
 import { api } from '../lib/api';
-import { getSeedData } from '../lib/seedData';
+import { getSeedData, getCleanInitialData, DEFAULT_CATEGORIES } from '../lib/seedData';
 
 interface FinanceState extends FinanceData {
   isLoading: boolean;
@@ -113,8 +113,8 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
     currency: 'INR',
     theme: 'light',
     monthStartDay: 1,
-    userName: 'Arjun Mehta',
-    userEmail: 'arjun@fintrack.io',
+    userName: 'FinTrack User',
+    userEmail: 'user@fintrack.io',
   },
   isLoading: true,
   toasts: [],
@@ -135,32 +135,33 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
     set({ isLoading: true });
     try {
       const saved = await storage.loadData();
-      if (saved && saved.accounts && saved.accounts.length > 0) {
+      if (saved && typeof saved === 'object') {
+        const cleanDefault = getCleanInitialData();
         set({
           transactions: saved.transactions || [],
           accounts: saved.accounts || [],
-          categories: saved.categories || [],
+          categories: saved.categories && saved.categories.length > 0 ? saved.categories : DEFAULT_CATEGORIES,
           budgets: saved.budgets || [],
           goals: saved.goals || [],
           recurringRules: saved.recurringRules || [],
-          mandates: saved.mandates || getSeedData().mandates || [],
-          settings: saved.settings || getSeedData().settings,
+          mandates: saved.mandates || [],
+          settings: saved.settings || cleanDefault.settings,
           isLoading: false,
         });
         get().setTheme(saved.settings?.theme || 'light');
       } else {
-        const seed = getSeedData();
-        await storage.saveData(seed);
+        const clean = getCleanInitialData();
+        await storage.saveData(clean);
         set({
-          ...seed,
+          ...clean,
           isLoading: false,
         });
-        get().setTheme(seed.settings.theme);
+        get().setTheme(clean.settings.theme);
       }
     } catch (e) {
       console.error('Initialization error', e);
-      const seed = getSeedData();
-      set({ ...seed, isLoading: false });
+      const clean = getCleanInitialData();
+      set({ ...clean, isLoading: false });
     }
   },
 
@@ -581,14 +582,15 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
     set({
       transactions: [],
       accounts: [],
-      categories: [],
+      categories: DEFAULT_CATEGORIES,
       budgets: [],
       goals: [],
       recurringRules: [],
+      mandates: [],
     });
     get().addToast({
       title: 'Demo Data Cleared',
-      description: 'All transactions, accounts, and budgets have been wiped.',
+      description: 'All transactions, accounts, budgets, and goals have been wiped.',
       type: 'warning',
     });
   },

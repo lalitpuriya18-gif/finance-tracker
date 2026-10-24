@@ -25,9 +25,10 @@ import {
 } from 'recharts';
 import { useFinanceStore } from '../../store/useFinanceStore';
 import { formatMoney } from '../../lib/currency';
+import { calculateAccountBalances } from '../../lib/calculations';
 
 export const ReportSummary: React.FC = () => {
-  const { transactions, categories, settings } = useFinanceStore();
+  const { transactions, categories, accounts, settings } = useFinanceStore();
   const [activeTimeframe, setActiveTimeframe] = useState('Last 6 Months');
 
   const timeframes = [
@@ -37,88 +38,100 @@ export const ReportSummary: React.FC = () => {
     'Custom Range',
   ];
 
-  // Dynamic cashflow comparison data with Stitch fallback
+  // Dynamic cashflow comparison data calculated from live transactions
   const cashflowData = React.useMemo(() => {
-    const defaultData = [
-      { month: 'May', income: 135000, expense: 69000, net: '+₹66k', isCurrent: false },
-      { month: 'Jun', income: 138000, expense: 77000, net: '+₹61k', isCurrent: false },
-      { month: 'Jul', income: 132000, expense: 81000, net: '+₹51k', isCurrent: false },
-      { month: 'Aug', income: 148000, expense: 71000, net: '+₹77k', isCurrent: false },
-      { month: 'Sep', income: 142000, expense: 76000, net: '+₹66k', isCurrent: false },
-      { month: 'Oct', income: 148060, expense: 68340, net: '+₹79.7k', isCurrent: true },
-    ];
+    if (!transactions || transactions.length === 0) return [];
 
-    if (!transactions || transactions.length === 0) return defaultData;
+    const now = new Date();
+    const count = activeTimeframe === 'Last 30 Days' ? 2 : 6;
+    const months = [];
+    for (let i = count - 1; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      const label = d.toLocaleDateString('en-GB', { month: 'short' });
 
-    if (activeTimeframe === 'Last 30 Days') {
-      return defaultData.slice(-2);
+      const monthTxs = transactions.filter((t) => t.date && t.date.startsWith(key));
+      const inc = Math.round(monthTxs.filter((t) => t.type === 'income').reduce((s, t) => s + t.amount, 0) / 100);
+      const exp = Math.round(monthTxs.filter((t) => t.type === 'expense').reduce((s, t) => s + t.amount, 0) / 100);
+      const netVal = inc - exp;
+      const netStr = `${netVal >= 0 ? '+' : '-'}₹${(Math.abs(netVal) / 1000).toFixed(1)}k`;
+
+      months.push({
+        month: label,
+        income: inc,
+        expense: exp,
+        net: netStr,
+        isCurrent: i === 0,
+      });
     }
-    return defaultData;
+    return months;
   }, [transactions, activeTimeframe]);
 
   // Top spending categories calculated dynamically from transactions
   const topSpendingCategories = React.useMemo(() => {
-    const defaultCategories = [
-      {
-        name: 'Food & Groceries',
-        amount: '₹21,860',
-        variance: '+18%',
-        varianceType: 'bad',
-        percent: 32.0,
-        barColor: 'bg-rose-500',
-        context: 'Target: ₹18,000',
-        icon: Utensils,
-        iconBg: 'bg-rose-50 text-rose-600 dark:bg-rose-950/40 dark:text-rose-400',
-      },
-      {
-        name: 'Rent & Living',
-        amount: '₹19,130',
-        variance: '0%',
-        varianceType: 'neutral',
-        percent: 28.0,
-        barColor: 'bg-emerald-600',
-        context: 'Fixed contractual',
-        icon: Home,
-        iconBg: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400',
-      },
-      {
-        name: 'Shopping',
-        amount: '₹9,560',
-        variance: '-4%',
-        varianceType: 'good',
-        percent: 14.0,
-        barColor: 'bg-emerald-600',
-        context: 'Budget: ₹12,000',
-        icon: ShoppingBag,
-        iconBg: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400',
-      },
-      {
-        name: 'Transport & Fuel',
-        amount: '₹8,200',
-        variance: '+2%',
-        varianceType: 'bad',
-        percent: 12.0,
-        barColor: 'bg-emerald-600',
-        context: 'Budget: ₹9,000',
-        icon: Car,
-        iconBg: 'bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-400',
-      },
-      {
-        name: 'Utilities & Bills',
-        amount: '₹6,150',
-        variance: '-6%',
-        varianceType: 'good',
-        percent: 9.0,
-        barColor: 'bg-emerald-600',
-        context: 'Avg: ₹6,500',
-        icon: Zap,
-        iconBg: 'bg-amber-50 text-amber-600 dark:bg-amber-950/40 dark:text-amber-400',
-      },
-    ];
+    if (!transactions || transactions.length === 0) return [];
 
-    if (!transactions || transactions.length === 0) return defaultCategories;
-    return defaultCategories;
-  }, [transactions, activeTimeframe]);
+    const expenses = transactions.filter((t) => t.type === 'expense');
+    const totalExp = expenses.reduce((s, t) => s + t.amount, 0);
+    if (totalExp === 0) return [];
+
+    const spendMap = new Map<string, number>();
+    for (const t of expenses) {
+      const catId = t.categoryId || 'other';
+      spendMap.set(catId, (spendMap.get(catId) || 0) + t.amount);
+    }
+
+    const items = Array.from(spendMap.entries()).map(([catId, amountPaise]) => {
+      const cat = categories.find((c) => c.id === catId);
+      const name = cat ? cat.name : 'Other';
+      const pct = Math.round((amountPaise / totalExp) * 100);
+      return {
+        name,
+        amount: formatMoney(amountPaise, settings.currency),
+        variance: `${pct}% of total`,
+        varianceType: (pct > 30 ? 'bad' : 'neutral') as 'neutral' | 'bad' | 'good',
+        percent: pct,
+        barColor: pct > 30 ? 'bg-rose-500' : 'bg-emerald-600',
+        context: 'Live ledger',
+        icon: Utensils,
+        iconBg: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400',
+      };
+    });
+
+    items.sort((a, b) => b.percent - a.percent);
+    return items.slice(0, 5);
+  }, [transactions, categories, settings]);
+
+  const totalExpensedPaise = React.useMemo(() => {
+    return transactions.filter((t) => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
+  }, [transactions]);
+
+  const averageSurplus = React.useMemo(() => {
+    if (cashflowData.length === 0) return 0;
+    const totalNet = cashflowData.reduce((sum, d) => sum + (d.income - d.expense), 0);
+    return Math.round(totalNet / cashflowData.length);
+  }, [cashflowData]);
+
+  const balances = calculateAccountBalances(accounts, transactions);
+  const totalBalance = Object.values(balances).reduce((sum, b) => sum + b, 0);
+
+  const totalLiquid = accounts
+    .filter((a) => a.type === 'bank' || a.type === 'cash' || a.type === 'wallet')
+    .reduce((sum, a) => sum + (balances[a.id] || 0), 0);
+
+  const totalDebt = accounts
+    .filter((a) => a.type === 'card' || (balances[a.id] || 0) < 0)
+    .reduce((sum, a) => {
+      const b = balances[a.id] || 0;
+      return sum + (b < 0 ? Math.abs(b) : 0);
+    }, 0);
+
+  const totalInflow = transactions.filter((t) => t.type === 'income').reduce((s, t) => s + t.amount, 0);
+  const dti = totalInflow > 0 ? ((totalDebt / totalInflow) * 100).toFixed(1) : '0.0';
+
+  const dailyBurnPaise = transactions.length > 0 ? Math.round(totalExpensedPaise / 30) : 0;
+  const projectedMonthEndPaise = dailyBurnPaise * 30;
+  const runwayMonths = dailyBurnPaise > 0 ? (totalLiquid / (dailyBurnPaise * 30)).toFixed(1) : totalLiquid > 0 ? '99+' : '0';
 
   const handlePrint = () => {
     window.print();
@@ -192,102 +205,109 @@ export const ReportSummary: React.FC = () => {
         </div>
 
         {/* 3 Insight Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* Card 1: Alert */}
-          <div className="bg-white dark:bg-slate-900 rounded-xl p-4 border border-emerald-100/80 dark:border-slate-800 shadow-xs flex flex-col justify-between">
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <span className="bg-rose-100 text-rose-700 dark:bg-rose-950/50 dark:text-rose-400 text-[10px] font-bold px-2 py-0.5 rounded">
-                  Alert
-                </span>
-                <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                  Dining Variance
-                </span>
+        {transactions.length === 0 ? (
+          <div className="bg-white dark:bg-slate-900 rounded-xl p-8 border border-slate-200/80 dark:border-slate-800 text-center space-y-2">
+            <Sparkles className="w-8 h-8 text-emerald-600 mx-auto" />
+            <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200">Awaiting Transaction Activity</h4>
+            <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto">
+              Once you log income and expenses, the FinTrack analytical engine will evaluate cashflow velocity, budget variances, and savings pace automatically.
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Card 1: Alert */}
+            <div className="bg-white dark:bg-slate-900 rounded-xl p-4 border border-emerald-100/80 dark:border-slate-800 shadow-xs flex flex-col justify-between">
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="bg-rose-100 text-rose-700 dark:bg-rose-950/50 dark:text-rose-400 text-[10px] font-bold px-2 py-0.5 rounded">
+                    Alert
+                  </span>
+                  <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                    Spending Variance
+                  </span>
+                </div>
+                <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                  FinTrack monitors categories nearing or exceeding allocated budget ceilings.
+                </p>
               </div>
-              <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                You spent <span className="text-rose-600 font-bold">18% more</span> on dining out (₹21,860) than last month.
-              </p>
+
+              <Link
+                to="/budgets"
+                className="bg-slate-50 hover:bg-slate-100 dark:bg-slate-800/60 dark:hover:bg-slate-800 rounded-lg p-2.5 flex items-center justify-between text-[11px] mt-4 transition-colors group"
+              >
+                <div className="flex items-center gap-1.5 text-slate-600 dark:text-slate-400 truncate mr-2">
+                  <MapPin className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                  <span className="truncate">Review active budgets</span>
+                </div>
+                <span className="font-bold text-emerald-700 dark:text-emerald-400 shrink-0 group-hover:underline">
+                  Manage ›
+                </span>
+              </Link>
             </div>
 
-            <Link
-              to="/budgets"
-              className="bg-slate-50 hover:bg-slate-100 dark:bg-slate-800/60 dark:hover:bg-slate-800 rounded-lg p-2.5 flex items-center justify-between text-[11px] mt-4 transition-colors group"
-            >
-              <div className="flex items-center gap-1.5 text-slate-600 dark:text-slate-400 truncate mr-2">
-                <MapPin className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                <span className="truncate">Ordering 3 fewer times/week saves</span>
+            {/* Card 2: Praise */}
+            <div className="bg-white dark:bg-slate-900 rounded-xl p-4 border border-emerald-100/80 dark:border-slate-800 shadow-xs flex flex-col justify-between">
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400 text-[10px] font-bold px-2 py-0.5 rounded">
+                    Praise
+                  </span>
+                  <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                    Savings Velocity
+                  </span>
+                </div>
+                <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                  Keep going! Your ledger balances are feeding wealth targets and SIP rules.
+                </p>
               </div>
-              <span className="font-bold text-emerald-700 dark:text-emerald-400 shrink-0 group-hover:underline">
-                ₹6,500/mo ›
-              </span>
-            </Link>
-          </div>
 
-          {/* Card 2: Praise */}
-          <div className="bg-white dark:bg-slate-900 rounded-xl p-4 border border-emerald-100/80 dark:border-slate-800 shadow-xs flex flex-col justify-between">
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <span className="bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400 text-[10px] font-bold px-2 py-0.5 rounded">
-                  Praise
+              <Link
+                to="/goals"
+                className="bg-slate-50 hover:bg-slate-100 dark:bg-slate-800/60 dark:hover:bg-slate-800 rounded-lg p-2.5 flex items-center gap-2 text-[11px] mt-4 transition-colors group"
+              >
+                <TrendingUp className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                <span className="text-slate-600 dark:text-slate-400 truncate flex-1">
+                  View portfolio goals
                 </span>
-                <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                  Savings Velocity
+                <span className="text-emerald-700 dark:text-emerald-400 font-bold group-hover:underline">
+                  ›
                 </span>
-              </div>
-              <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                Great job! Your savings rate reached <span className="text-emerald-600 font-bold">52.8%</span> in October, exceeding your benchmark.
-              </p>
+              </Link>
             </div>
 
-            <Link
-              to="/goals"
-              className="bg-slate-50 hover:bg-slate-100 dark:bg-slate-800/60 dark:hover:bg-slate-800 rounded-lg p-2.5 flex items-center gap-2 text-[11px] mt-4 transition-colors group"
-            >
-              <TrendingUp className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-              <span className="font-bold text-emerald-700 dark:text-emerald-400">
-                +2.8%
-              </span>
-              <span className="text-slate-600 dark:text-slate-400 truncate flex-1">
-                vs your standard 50% target profile.
-              </span>
-              <span className="text-emerald-700 dark:text-emerald-400 font-bold group-hover:underline">
-                ›
-              </span>
-            </Link>
-          </div>
-
-          {/* Card 3: Opportunity */}
-          <div className="bg-white dark:bg-slate-900 rounded-xl p-4 border border-emerald-100/80 dark:border-slate-800 shadow-xs flex flex-col justify-between">
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <span className="bg-indigo-100 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-400 text-[10px] font-bold px-2 py-0.5 rounded">
-                  Opportunity
-                </span>
-                <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                  Upcoming Cycle
-                </span>
+            {/* Card 3: Opportunity */}
+            <div className="bg-white dark:bg-slate-900 rounded-xl p-4 border border-emerald-100/80 dark:border-slate-800 shadow-xs flex flex-col justify-between">
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="bg-indigo-100 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-400 text-[10px] font-bold px-2 py-0.5 rounded">
+                    Opportunity
+                  </span>
+                  <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                    Ledger Health
+                  </span>
+                </div>
+                <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                  Scheduled debits and upcoming bills are reconciled automatically.
+                </p>
               </div>
-              <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                Annual subscription renewal detected: <span className="font-bold text-slate-900 dark:text-slate-100">Cult.fit (₹14,990)</span> due on Nov 12.
-              </p>
+
+              <Link
+                to="/transactions"
+                className="bg-slate-50 hover:bg-slate-100 dark:bg-slate-800/60 dark:hover:bg-slate-800 rounded-lg p-2.5 flex items-center justify-between gap-1.5 text-[11px] mt-4 transition-colors group"
+              >
+                <div className="flex items-center gap-1.5 truncate">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                  <span className="text-slate-600 dark:text-slate-400 truncate">
+                    Reconcile transactions
+                  </span>
+                </div>
+                <span className="text-indigo-600 dark:text-indigo-400 font-bold group-hover:underline shrink-0">
+                  View ›
+                </span>
+              </Link>
             </div>
-
-            <Link
-              to="/transactions"
-              className="bg-slate-50 hover:bg-slate-100 dark:bg-slate-800/60 dark:hover:bg-slate-800 rounded-lg p-2.5 flex items-center justify-between gap-1.5 text-[11px] mt-4 transition-colors group"
-            >
-              <div className="flex items-center gap-1.5 truncate">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                <span className="text-slate-600 dark:text-slate-400 truncate">
-                  Auto-allocated under Recurring Bills.
-                </span>
-              </div>
-              <span className="text-indigo-600 dark:text-indigo-400 font-bold group-hover:underline shrink-0">
-                View ›
-              </span>
-            </Link>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Center Section: Cashflow Comparison & Top Spending */}
@@ -323,82 +343,92 @@ export const ReportSummary: React.FC = () => {
             </div>
 
             {/* Pill badges strip representing Net Surplus above each bar */}
-            <div className="grid grid-cols-6 gap-2 mb-2 px-8">
-              {cashflowData.map((d) => (
-                <div key={d.month} className="flex justify-center">
-                  <span
-                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full tracking-tight whitespace-nowrap shadow-xs ${
-                      d.isCurrent
-                        ? 'bg-[#d1fae5] text-[#065f46] border border-emerald-300'
-                        : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
-                    }`}
-                  >
-                    {d.net}
-                  </span>
-                </div>
-              ))}
-            </div>
+            {cashflowData.length > 0 && (
+              <div className="grid grid-cols-6 gap-2 mb-2 px-8">
+                {cashflowData.map((d) => (
+                  <div key={d.month} className="flex justify-center">
+                    <span
+                      className={`text-[10px] font-bold px-2 py-0.5 rounded-full tracking-tight whitespace-nowrap shadow-xs ${
+                        d.isCurrent
+                          ? 'bg-[#d1fae5] text-[#065f46] border border-emerald-300'
+                          : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
+                      }`}
+                    >
+                      {d.net}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
 
             {/* Recharts Grouped Bar Chart */}
-            <div className="h-64 w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={cashflowData}
-                  margin={{ top: 10, right: 10, left: -15, bottom: 0 }}
-                  barGap={6}
-                >
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.15} />
-                  <XAxis
-                    dataKey="month"
-                    tickLine={false}
-                    axisLine={{ stroke: '#e2e8f0' }}
-                    tick={{ fontSize: 11, fill: '#64748b' }}
-                  />
-                  <YAxis
-                    tickLine={false}
-                    axisLine={false}
-                    tick={{ fontSize: 10, fill: '#64748b' }}
-                    tickFormatter={(v) => `₹${v / 1000}k`}
-                    ticks={[0, 40000, 80000, 120000, 160000]}
-                    domain={[0, 170000]}
-                  />
-                  <Tooltip
-                    cursor={{ fill: 'rgba(0, 0, 0, 0.03)' }}
-                    content={({ active, payload, label }) => {
-                      if (active && payload && payload.length) {
-                        return (
-                          <div className="bg-slate-900 text-white p-2.5 rounded-lg text-xs shadow-xl space-y-1">
-                            <p className="font-bold border-b border-slate-700 pb-1">{label} 2023</p>
-                            <p className="text-emerald-400">
-                              Income: ₹{payload[0]?.value?.toLocaleString('en-IN')}
-                            </p>
-                            <p className="text-rose-400">
-                              Expenses: ₹{payload[1]?.value?.toLocaleString('en-IN')}
-                            </p>
-                            <p className="text-slate-300 font-semibold pt-1 border-t border-slate-800">
-                              Net: ₹{((payload[0]?.value as number || 0) - (payload[1]?.value as number || 0)).toLocaleString('en-IN')}
-                            </p>
-                          </div>
-                        );
-                      }
-                      return null;
-                    }}
-                  />
-                  <Bar
-                    dataKey="income"
-                    fill="#047857"
-                    radius={[4, 4, 0, 0]}
-                    maxBarSize={32}
-                  />
-                  <Bar
-                    dataKey="expense"
-                    fill="#dc2626"
-                    radius={[4, 4, 0, 0]}
-                    maxBarSize={32}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
+            {cashflowData.length === 0 ? (
+              <div className="h-64 flex flex-col items-center justify-center text-center p-4">
+                <span className="text-xs font-semibold text-slate-500">No cashflow transactions in this timeframe</span>
+                <p className="text-[11px] text-slate-400 mt-1 max-w-[220px]">
+                  Add income and expense entries to visualize trailing monthly cashflow.
+                </p>
+              </div>
+            ) : (
+              <div className="h-64 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={cashflowData}
+                    margin={{ top: 10, right: 10, left: -15, bottom: 0 }}
+                    barGap={6}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.15} />
+                    <XAxis
+                      dataKey="month"
+                      tickLine={false}
+                      axisLine={{ stroke: '#e2e8f0' }}
+                      tick={{ fontSize: 11, fill: '#64748b' }}
+                    />
+                    <YAxis
+                      tickLine={false}
+                      axisLine={false}
+                      tick={{ fontSize: 10, fill: '#64748b' }}
+                      tickFormatter={(v) => `₹${v / 1000}k`}
+                      domain={[0, 'auto']}
+                    />
+                    <Tooltip
+                      cursor={{ fill: 'rgba(0, 0, 0, 0.03)' }}
+                      content={({ active, payload, label }) => {
+                        if (active && payload && payload.length) {
+                          return (
+                            <div className="bg-slate-900 text-white p-2.5 rounded-lg text-xs shadow-xl space-y-1">
+                              <p className="font-bold border-b border-slate-700 pb-1">{label}</p>
+                              <p className="text-emerald-400">
+                                Income: ₹{payload[0]?.value?.toLocaleString('en-IN')}
+                              </p>
+                              <p className="text-rose-400">
+                                Expenses: ₹{payload[1]?.value?.toLocaleString('en-IN')}
+                              </p>
+                              <p className="text-slate-300 font-semibold pt-1 border-t border-slate-800">
+                                Net: ₹{((payload[0]?.value as number || 0) - (payload[1]?.value as number || 0)).toLocaleString('en-IN')}
+                              </p>
+                            </div>
+                          );
+                        }
+                        return null;
+                      }}
+                    />
+                    <Bar
+                      dataKey="income"
+                      fill="#047857"
+                      radius={[4, 4, 0, 0]}
+                      maxBarSize={32}
+                    />
+                    <Bar
+                      dataKey="expense"
+                      fill="#dc2626"
+                      radius={[4, 4, 0, 0]}
+                      maxBarSize={32}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            )}
           </div>
 
           {/* Bottom Banner inside Monthly Cashflow Card */}
@@ -406,12 +436,14 @@ export const ReportSummary: React.FC = () => {
             <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300">
               <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
               <span>
-                Average Monthly Net Surplus across H2:{' '}
-                <strong className="text-slate-900 dark:text-slate-100">₹66,780</strong>
+                Average Monthly Net Surplus:{' '}
+                <strong className="text-slate-900 dark:text-slate-100">
+                  {formatMoney(averageSurplus * 100, settings.currency)}
+                </strong>
               </span>
             </div>
             <span className="font-bold text-emerald-700 dark:text-emerald-400 flex items-center gap-0.5">
-              +14.3% vs H1 Benchmark ↑
+              Live ledger summary
             </span>
           </div>
         </Card>
@@ -429,7 +461,7 @@ export const ReportSummary: React.FC = () => {
                 </h3>
               </div>
               <span className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs px-2.5 py-0.5 rounded-md font-semibold">
-                October
+                {activeTimeframe}
               </span>
             </div>
 
@@ -437,12 +469,17 @@ export const ReportSummary: React.FC = () => {
             <div className="flex items-baseline justify-between border-b border-slate-100 dark:border-slate-800 pb-3 mb-3">
               <span className="text-xs text-slate-500">Total Expensed</span>
               <span className="text-2xl font-black text-slate-900 dark:text-slate-100 tabular-nums">
-                ₹68,340
+                {formatMoney(totalExpensedPaise, settings.currency)}
               </span>
             </div>
 
             {/* Category breakdown list */}
-            <div className="space-y-3.5">
+            {topSpendingCategories.length === 0 ? (
+              <div className="py-8 text-center text-xs text-slate-400">
+                No expense records logged in this timeframe.
+              </div>
+            ) : (
+              <div className="space-y-3.5">
               {topSpendingCategories.map((cat) => {
                 const IconComponent = cat.icon;
                 return (
@@ -491,6 +528,7 @@ export const ReportSummary: React.FC = () => {
                 );
               })}
             </div>
+            )}
           </div>
         </Card>
       </div>
@@ -505,7 +543,7 @@ export const ReportSummary: React.FC = () => {
                 Solvency Health
               </span>
               <span className="bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 text-[10px] font-bold px-2 py-0.5 rounded-full">
-                Healthy Status
+                {totalDebt === 0 ? 'Zero Debt' : Number(dti) < 30 ? 'Healthy Status' : 'Watch Status'}
               </span>
             </div>
             <h4 className="text-xs font-bold text-slate-700 dark:text-slate-300">
@@ -514,7 +552,7 @@ export const ReportSummary: React.FC = () => {
 
             <div className="flex items-baseline gap-2 mt-3">
               <span className="text-3xl font-black text-slate-900 dark:text-slate-100 tabular-nums">
-                14.2%
+                {dti}%
               </span>
               <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-0.5">
                 ✓ Under 30% Ceiling
@@ -525,14 +563,16 @@ export const ReportSummary: React.FC = () => {
             <div className="w-full bg-slate-100 dark:bg-slate-800 h-2 rounded-full overflow-hidden mt-3 relative">
               <div
                 className="h-full bg-emerald-600 rounded-full"
-                style={{ width: '14.2%' }}
+                style={{ width: `${Math.min(Number(dti), 100)}%` }}
               />
             </div>
           </div>
 
           <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
-            <span>Debt Servicing: ₹20,600/mo</span>
-            <span className="font-medium text-emerald-600">85.8% Clean Capacity</span>
+            <span>Debt Servicing: {formatMoney(totalDebt, settings.currency)}</span>
+            <span className="font-medium text-emerald-600">
+              {(100 - Math.min(Number(dti), 100)).toFixed(1)}% Clean Capacity
+            </span>
           </div>
         </Card>
 
@@ -553,19 +593,21 @@ export const ReportSummary: React.FC = () => {
 
             <div className="flex items-baseline gap-1 mt-3">
               <span className="text-3xl font-black text-slate-900 dark:text-slate-100 tabular-nums">
-                ₹2,204
+                {formatMoney(dailyBurnPaise, settings.currency)}
               </span>
               <span className="text-xs font-semibold text-slate-500">/ day</span>
             </div>
 
             <div className="mt-3 text-xs flex items-center justify-between text-slate-500">
               <span>Projected Month End</span>
-              <span className="font-bold text-slate-800 dark:text-slate-200">₹68,340</span>
+              <span className="font-bold text-slate-800 dark:text-slate-200">
+                {formatMoney(projectedMonthEndPaise, settings.currency)}
+              </span>
             </div>
           </div>
 
           <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 text-[11px] font-bold text-emerald-700 dark:text-emerald-400">
-            Runway remaining: 18.4 months of liquid emergency reserves
+            Runway: {runwayMonths} {runwayMonths === '1' ? 'month' : 'months'} of liquid emergency reserves
           </div>
         </Card>
 
@@ -577,55 +619,36 @@ export const ReportSummary: React.FC = () => {
                 Asset Mix
               </span>
               <span className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-bold px-2 py-0.5 rounded-md">
-                ₹38.4L Total
+                {formatMoney(totalBalance, settings.currency)} Total
               </span>
             </div>
             <h4 className="text-xs font-bold text-slate-700 dark:text-slate-300">
-              Investment Allocation
+              Account Reserves
             </h4>
 
-            {/* Segmented Progress Bar */}
-            <div className="w-full h-3 rounded-full flex overflow-hidden gap-0.5 mt-3 bg-slate-100 dark:bg-slate-800 p-0.5">
-              <div className="bg-[#047857] h-full rounded-l-full" style={{ width: '40%' }} title="Fixed Deposits 40%" />
-              <div className="bg-[#34d399] h-full" style={{ width: '35%' }} title="Mutual Funds 35%" />
-              <div className="bg-[#818cf8] h-full" style={{ width: '15%' }} title="Direct Equity 15%" />
-              <div className="bg-[#cbd5e1] h-full rounded-r-full" style={{ width: '10%' }} title="Gold & Cash 10%" />
-            </div>
-
-            {/* Legend Breakdown */}
-            <div className="space-y-1.5 mt-3 text-[11px]">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-[#047857]"></span>
-                  <span className="text-slate-600 dark:text-slate-400">Fixed Deposits (FDs)</span>
-                </div>
-                <span className="font-bold text-slate-900 dark:text-slate-100">40% <span className="text-slate-400 font-normal">(₹15.36L)</span></span>
+            {accounts.length === 0 ? (
+              <div className="py-8 text-center text-xs text-slate-400">
+                No accounts connected yet. Add bank accounts or wallets to view portfolio distribution.
               </div>
-
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-[#34d399]"></span>
-                  <span className="text-slate-600 dark:text-slate-400">Mutual Funds (Equity)</span>
-                </div>
-                <span className="font-bold text-slate-900 dark:text-slate-100">35% <span className="text-slate-400 font-normal">(₹13.44L)</span></span>
+            ) : (
+              <div className="space-y-2 mt-3 text-[11px]">
+                {accounts.slice(0, 4).map((acc) => {
+                  const bal = balances[acc.id] || 0;
+                  const pct = totalBalance > 0 ? Math.max(0, Math.round((bal / totalBalance) * 100)) : 0;
+                  return (
+                    <div key={acc.id} className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5 truncate max-w-[140px]">
+                        <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: acc.color || '#047857' }} />
+                        <span className="text-slate-600 dark:text-slate-400 truncate">{acc.name}</span>
+                      </div>
+                      <span className="font-bold text-slate-900 dark:text-slate-100 tabular-nums">
+                        {pct}% <span className="text-slate-400 font-normal">({formatMoney(bal, settings.currency)})</span>
+                      </span>
+                    </div>
+                  );
+                })}
               </div>
-
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-[#818cf8]"></span>
-                  <span className="text-slate-600 dark:text-slate-400">Direct Equity (Stocks)</span>
-                </div>
-                <span className="font-bold text-slate-900 dark:text-slate-100">15% <span className="text-slate-400 font-normal">(₹5.76L)</span></span>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-[#cbd5e1]"></span>
-                  <span className="text-slate-600 dark:text-slate-400">Sovereign Gold & Cash</span>
-                </div>
-                <span className="font-bold text-slate-900 dark:text-slate-100">10% <span className="text-slate-400 font-normal">(₹3.84L)</span></span>
-              </div>
-            </div>
+            )}
           </div>
         </Card>
       </div>

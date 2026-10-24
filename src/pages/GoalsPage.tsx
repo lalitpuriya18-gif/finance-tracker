@@ -31,47 +31,7 @@ export const GoalsPage: React.FC = () => {
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
   const [isArchiveOpen, setIsArchiveOpen] = useState(false);
 
-  // Fallback default mandates if not initialized
-  const defaultMandates = [
-    {
-      id: 'm-1',
-      goalName: 'Emergency Reserve SIP',
-      mandateType: 'Auto-Debit (ICICI)',
-      cycleDate: '1st of every month',
-      monthlyAllocation: 2000000,
-      estCompletion: 'Feb 2024 (4 mos)',
-      status: 'Active' as const,
-    },
-    {
-      id: 'm-2',
-      goalName: 'Goa Getaway Sweep',
-      mandateType: 'Weekly Auto-Sweep',
-      cycleDate: 'Every Monday',
-      monthlyAllocation: 250000,
-      estCompletion: 'Dec 2023 (6 wks)',
-      status: 'Active' as const,
-    },
-    {
-      id: 'm-3',
-      goalName: 'MacBook Pro Tech Fund',
-      mandateType: 'Salary Day Mandate',
-      cycleDate: '28th of every month',
-      monthlyAllocation: 1500000,
-      estCompletion: 'Jan 2024 (3 mos)',
-      status: 'Active' as const,
-    },
-    {
-      id: 'm-4',
-      goalName: 'Angel Syndicate Sinking Fund',
-      mandateType: 'Discretionary Surplus',
-      cycleDate: 'Bi-Monthly',
-      monthlyAllocation: 1000000,
-      estCompletion: 'Mar 2024 (5 mos)',
-      status: 'Paused' as const,
-    },
-  ];
-
-  const currentMandates = storeMandates && storeMandates.length > 0 ? storeMandates : defaultMandates;
+  const currentMandates = storeMandates || [];
 
   const handleToggleMandate = (id: string) => {
     toggleMandate(id);
@@ -156,6 +116,16 @@ export const GoalsPage: React.FC = () => {
 
   const percentMet = cumulativeTarget > 0 ? ((totalCapitalAllocated / cumulativeTarget) * 100).toFixed(2) : '0';
 
+  const monthlyRunRate = useMemo(() => {
+    return goals.reduce((sum, g) => sum + (g.monthlyContribution || 0), 0);
+  }, [goals]);
+
+  const { completedGoals, completedAmount } = useMemo(() => {
+    const list = goals.filter((g) => g.savedAmount >= g.targetAmount && g.targetAmount > 0);
+    const amount = list.reduce((sum, g) => sum + g.savedAmount, 0);
+    return { completedGoals: list, completedAmount: amount };
+  }, [goals]);
+
   const handleOpenContribute = (goal: Goal) => {
     setContributeGoal(goal);
   };
@@ -221,7 +191,7 @@ export const GoalsPage: React.FC = () => {
           </div>
           <div className="mt-2 text-xs flex items-center justify-between">
             <span className="text-emerald-700 dark:text-emerald-400 font-semibold text-[11px]">
-              ↗ Active across {goals.length} portfolio reserves
+              {goals.length > 0 ? `↗ Active across ${goals.length} portfolio reserves` : 'No active goals'}
             </span>
           </div>
           <div className="mt-1 pt-2 border-t border-slate-100 dark:border-slate-800 text-[11px] text-slate-400 flex justify-between font-medium">
@@ -241,17 +211,19 @@ export const GoalsPage: React.FC = () => {
             </div>
           </div>
           <div className="mt-2 text-2xl font-bold text-slate-900 dark:text-slate-100 tabular-nums">
-            ₹35,000 <span className="text-sm text-slate-400 font-semibold">/mo</span>
+            {formatMoney(monthlyRunRate, settings.currency)} <span className="text-sm text-slate-400 font-semibold">/mo</span>
           </div>
           <div className="mt-2 text-xs flex items-center gap-1.5">
             <span className="px-1.5 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 font-semibold text-[10px]">
-              Automated SIP
+              {monthlyRunRate > 0 ? 'Automated SIP' : 'Discretionary'}
             </span>
-            <span className="text-slate-400 text-[11px]">Next deduction Nov 01 (in 6 days)</span>
+            <span className="text-slate-400 text-[11px]">
+              {goals.length > 0 ? `Across ${goals.length} target portfolios` : 'No recurring SIPs active'}
+            </span>
           </div>
           <div className="mt-1 pt-2 border-t border-slate-100 dark:border-slate-800 text-[11px] text-slate-400 flex justify-between font-medium">
-            <span>Primary Source: Linked Salary A/c</span>
-            <span className="text-emerald-600 font-bold">100% On Schedule</span>
+            <span>Primary Source: Linked Accounts</span>
+            <span className="text-emerald-600 font-bold">{goals.length > 0 ? 'Configured' : 'Awaiting Targets'}</span>
           </div>
         </Card>
 
@@ -266,10 +238,14 @@ export const GoalsPage: React.FC = () => {
             </div>
           </div>
           <div className="mt-2 text-2xl font-bold text-slate-900 dark:text-slate-100 tabular-nums">
-            3 Goals <span className="text-sm text-slate-400 font-normal">fulfilled in 2023</span>
+            {completedGoals.length} {completedGoals.length === 1 ? 'Goal' : 'Goals'} <span className="text-sm text-slate-400 font-normal">fulfilled</span>
           </div>
           <div className="mt-2 text-[11px] text-slate-400">
-            <strong className="text-slate-700 dark:text-slate-300">₹1,95,000</strong> liquidated for debt reduction & taxes
+            {completedAmount > 0 ? (
+              <><strong className="text-slate-700 dark:text-slate-300">{formatMoney(completedAmount, settings.currency)}</strong> achieved and secured</>
+            ) : (
+              <span>No completed goals yet. Keep saving!</span>
+            )}
           </div>
           <div className="mt-1 pt-2 border-t border-slate-100 dark:border-slate-800 text-[11px] text-slate-400 flex justify-between font-medium">
             <button
@@ -278,7 +254,7 @@ export const GoalsPage: React.FC = () => {
             >
               View Archive Ledger ›
             </button>
-            <span>Avg speed: 4.8 mos</span>
+            <span>Target completion</span>
           </div>
         </Card>
       </div>
@@ -464,7 +440,7 @@ export const GoalsPage: React.FC = () => {
           </div>
 
           <span className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-[#eef2ff] dark:bg-indigo-950/50 text-[#3730a3] dark:text-indigo-300 border border-indigo-200/60 dark:border-indigo-800/60">
-            ICICI NetBanking Connected
+            {currentMandates.length} Registered {currentMandates.length === 1 ? 'Mandate' : 'Mandates'}
           </span>
         </div>
 
@@ -482,7 +458,14 @@ export const GoalsPage: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-              {currentMandates.map((m) => (
+              {currentMandates.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="p-8 text-center text-slate-400 text-xs">
+                    No active automated mandates. Set up SIP debits or auto-sweeps when creating savings goals.
+                  </td>
+                </tr>
+              ) : (
+                currentMandates.map((m) => (
                 <tr key={m.id} className="hover:bg-slate-50/50 transition-colors">
                   <td className="p-3 font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
@@ -519,7 +502,8 @@ export const GoalsPage: React.FC = () => {
                     </button>
                   </td>
                 </tr>
-              ))}
+              ))
+            )}
             </tbody>
           </table>
         </div>
