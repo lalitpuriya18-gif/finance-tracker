@@ -22,13 +22,13 @@ describe('FinTrack Backend & SQLite Engine', () => {
     dbResetToDemo();
   });
 
-  it('initializes and bootstraps database with sample fintech dataset', () => {
+  it('initializes and bootstraps database with clean initial dataset', () => {
     const data = getFullBootstrap();
-    expect(data.accounts.length).toBeGreaterThan(0);
+    expect(data.accounts.length).toBe(0);
     expect(data.categories.length).toBeGreaterThan(0);
-    expect(data.transactions.length).toBeGreaterThan(0);
-    expect(data.budgets.length).toBeGreaterThan(0);
-    expect(data.goals.length).toBeGreaterThan(0);
+    expect(data.transactions.length).toBe(0);
+    expect(data.budgets.length).toBe(0);
+    expect(data.goals.length).toBe(0);
     expect(data.settings.currency).toBe('INR');
   });
 

@@ -38,8 +38,7 @@ export const SettingsPage: React.FC = () => {
     addCategory,
     updateCategory,
     deleteCategory,
-    clearDemoData,
-    resetToDemoData,
+    deleteData,
     importBackupJson,
   } = useFinanceStore();
 
@@ -51,9 +50,8 @@ export const SettingsPage: React.FC = () => {
   const [catIcon, setCatIcon] = useState('Tag');
   const [catColor, setCatColor] = useState('#10b981');
 
-  // Confirmation dialogs
+  // Confirmation dialog
   const [confirmClearOpen, setConfirmClearOpen] = useState(false);
-  const [confirmResetOpen, setConfirmResetOpen] = useState(false);
 
   const handleOpenCatModal = (cat?: Category) => {
     if (cat) {
@@ -313,13 +311,13 @@ export const SettingsPage: React.FC = () => {
         </div>
       </Card>
 
-      {/* Demo Data Management */}
+      {/* Data Management */}
       <Card className="space-y-4 border-rose-500/20">
         <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 border-b border-slate-100 dark:border-slate-800 pb-2">
-          Demo Data & Database Reset
+          Data Management
         </h3>
-        <p className="text-xs text-slate-500 dark:text-slate-400">
-          Switch between the realistic seeded test dataset and a pristine blank workspace.
+        <p className="text-xs text-slate-600 dark:text-slate-400">
+          Permanently delete all financial data and reset your workspace to a clean slate.
         </p>
 
         <div className="flex items-center gap-3 flex-wrap">
@@ -327,18 +325,11 @@ export const SettingsPage: React.FC = () => {
             variant="danger"
             size="sm"
             onClick={() => setConfirmClearOpen(true)}
-            icon={<Trash2 className="w-4 h-4" />}
+            icon={<Trash2 className="w-4 h-4" aria-hidden="true" />}
+            title="Delete Data"
+            aria-label="Delete all data"
           >
-            Clear Demo Data
-          </Button>
-
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setConfirmResetOpen(true)}
-            icon={<RotateCcw className="w-4 h-4" />}
-          >
-            Reset to Demo Data
+            Delete Data
           </Button>
         </div>
       </Card>
@@ -422,17 +413,17 @@ export const SettingsPage: React.FC = () => {
         </form>
       </Modal>
 
-      {/* Confirmation Modal: Clear Data */}
+      {/* Confirmation Modal: Delete Data */}
       <Modal
         isOpen={confirmClearOpen}
         onClose={() => setConfirmClearOpen(false)}
-        title="Clear All Financial Data?"
-        description="This will permanently remove all transactions, accounts, and budgets from your local storage."
+        title="Delete All Financial Data?"
+        description="This will permanently delete all transactions, accounts, budgets, and goals from your local storage and database."
         maxWidth="sm"
       >
         <div className="space-y-4">
           <div className="flex items-start gap-3 p-3 rounded-lg bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-xs text-rose-700 dark:text-rose-300">
-            <AlertTriangle className="w-5 h-5 shrink-0 text-rose-500" />
+            <AlertTriangle className="w-5 h-5 shrink-0 text-rose-500" aria-hidden="true" />
             <span>Are you sure? You can export a JSON backup beforehand if you wish to keep a copy.</span>
           </div>
 
@@ -443,41 +434,11 @@ export const SettingsPage: React.FC = () => {
             <Button
               variant="danger"
               onClick={() => {
-                clearDemoData();
+                deleteData();
                 setConfirmClearOpen(false);
               }}
             >
-              Yes, Clear Data
-            </Button>
-          </div>
-        </div>
-      </Modal>
-
-      {/* Confirmation Modal: Reset to Demo Data */}
-      <Modal
-        isOpen={confirmResetOpen}
-        onClose={() => setConfirmResetOpen(false)}
-        title="Reset to Demo Data?"
-        description="This will overwrite current data with the realistic sample fintech dataset."
-        maxWidth="sm"
-      >
-        <div className="space-y-4">
-          <p className="text-xs text-slate-600 dark:text-slate-400">
-            This restores 4 sample accounts, 40+ transactions across 3 months, category budgets, savings goals, and recurring rules.
-          </p>
-
-          <div className="flex items-center justify-end gap-3">
-            <Button variant="outline" onClick={() => setConfirmResetOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              variant="primary"
-              onClick={() => {
-                resetToDemoData();
-                setConfirmResetOpen(false);
-              }}
-            >
-              Reset to Demo
+              Yes, Delete Data
             </Button>
           </div>
         </div>

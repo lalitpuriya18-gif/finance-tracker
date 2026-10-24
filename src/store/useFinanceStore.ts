@@ -96,6 +96,7 @@ interface FinanceState extends FinanceData {
   resetFilters: () => void;
 
   // Maintenance & Backup
+  deleteData: () => Promise<void>;
   clearDemoData: () => Promise<void>;
   resetToDemoData: () => Promise<void>;
   importBackupJson: (data: FinanceData) => Promise<void>;
@@ -572,7 +573,7 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
       sortOrder: 'desc',
     }),
 
-  clearDemoData: async () => {
+  deleteData: async () => {
     try {
       await api.clearAllData();
     } catch (e) {
@@ -589,33 +590,18 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
       mandates: [],
     });
     get().addToast({
-      title: 'Demo Data Cleared',
-      description: 'All transactions, accounts, budgets, and goals have been wiped.',
+      title: 'Data Deleted',
+      description: 'All transactions, accounts, budgets, and goals have been permanently deleted.',
       type: 'warning',
     });
   },
 
+  clearDemoData: async () => {
+    await get().deleteData();
+  },
+
   resetToDemoData: async () => {
-    try {
-      const res = await api.resetDemoData();
-      if (res && res.data) {
-        set({ ...res.data });
-        await storage.saveData(res.data);
-      } else {
-        const seed = getSeedData();
-        await storage.saveData(seed);
-        set({ ...seed });
-      }
-    } catch {
-      const seed = getSeedData();
-      await storage.saveData(seed);
-      set({ ...seed });
-    }
-    get().addToast({
-      title: 'Demo Data Restored',
-      description: 'Sample fintech dataset re-seeded successfully.',
-      type: 'success',
-    });
+    await get().deleteData();
   },
 
   importBackupJson: async (data: FinanceData) => {

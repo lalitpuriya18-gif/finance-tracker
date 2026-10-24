@@ -757,14 +757,7 @@ export function dbUpdateSettings(updates: Partial<Settings>, userId = 'user-defa
 
 // Reset & Clear
 export function dbResetToDemo(userId = 'user-default') {
-  db.prepare('DELETE FROM transactions WHERE user_id = ?').run(userId);
-  db.prepare('DELETE FROM accounts WHERE user_id = ?').run(userId);
-  db.prepare('DELETE FROM categories WHERE user_id = ?').run(userId);
-  db.prepare('DELETE FROM budgets WHERE user_id = ?').run(userId);
-  db.prepare('DELETE FROM goals WHERE user_id = ?').run(userId);
-  db.prepare('DELETE FROM mandates WHERE user_id = ?').run(userId);
-  db.prepare('DELETE FROM notifications WHERE user_id = ?').run(userId);
-  seedDatabase(userId);
+  dbClearAll(userId);
 }
 
 export function dbClearAll(userId = 'user-default') {
