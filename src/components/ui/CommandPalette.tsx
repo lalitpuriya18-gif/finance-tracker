@@ -303,9 +303,12 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ onOpenAddTransac
               </div>
               <button
                 onClick={() => setIsShortcutsHelpOpen(false)}
-                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                className="text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 p-1 rounded-md"
+                title="Close shortcuts dialog"
+                aria-label="Close shortcuts dialog"
               >
-                <X className="w-4 h-4" />
+                <X className="w-4 h-4" aria-hidden="true" />
+                <span className="sr-only">Close shortcuts dialog</span>
               </button>
             </div>
 

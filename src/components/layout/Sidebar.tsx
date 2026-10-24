@@ -91,24 +91,28 @@ export const Sidebar: React.FC<SidebarProps> = ({ isMobile }) => {
             <button
               onClick={() => handleToggleTheme('light')}
               title="Light theme"
+              aria-label="Switch to light theme"
               className={`p-1 rounded-md transition-colors ${
                 settings.theme === 'light'
                   ? 'bg-slate-100 text-amber-500 shadow-xs'
                   : 'text-slate-400 hover:text-slate-600'
               }`}
             >
-              <Sun className="w-3.5 h-3.5" />
+              <Sun className="w-3.5 h-3.5" aria-hidden="true" />
+              <span className="sr-only">Light theme</span>
             </button>
             <button
               onClick={() => handleToggleTheme('dark')}
               title="Dark theme"
+              aria-label="Switch to dark theme"
               className={`p-1 rounded-md transition-colors ${
                 settings.theme === 'dark'
                   ? 'bg-slate-800 text-indigo-400 shadow-xs'
                   : 'text-slate-400 hover:text-slate-600'
               }`}
             >
-              <Moon className="w-3.5 h-3.5" />
+              <Moon className="w-3.5 h-3.5" aria-hidden="true" />
+              <span className="sr-only">Dark theme</span>
             </button>
           </div>
         </div>
@@ -132,7 +136,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isMobile }) => {
                 <p className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate">
                   {settings.userName || 'FinTrack User'}
                 </p>
-                <p className="text-[10px] text-slate-400 dark:text-slate-500 truncate">
+                <p className="text-[10px] text-slate-600 dark:text-slate-400 font-medium truncate">
                   {settings.userEmail || 'user@fintrack.io'}
                 </p>
               </div>
@@ -140,10 +144,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ isMobile }) => {
 
             <button
               onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-              className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded-md"
+              className="text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 p-1 rounded-md"
               title="Profile menu"
+              aria-label="Open profile options menu"
             >
-              <MoreVertical className="w-4 h-4" />
+              <MoreVertical className="w-4 h-4" aria-hidden="true" />
+              <span className="sr-only">Open profile options menu</span>
             </button>
           </div>
 

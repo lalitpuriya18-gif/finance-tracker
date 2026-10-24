@@ -36,7 +36,7 @@ export const DashboardPage: React.FC = () => {
           <h2 className="text-2xl md:text-3xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight flex items-center gap-2">
             Welcome back, {settings.userName || 'FinTrack User'} <span>👋</span>
           </h2>
-          <p className="text-xs md:text-sm text-slate-500 dark:text-slate-400 mt-1">
+          <p className="text-xs md:text-sm text-slate-600 dark:text-slate-400 mt-1">
             Here's your consolidated personal finance overview
           </p>
         </div>
@@ -45,10 +45,12 @@ export const DashboardPage: React.FC = () => {
           <button
             onClick={handleSync}
             disabled={isSyncing}
-            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-850 text-xs font-semibold text-slate-600 dark:text-slate-300 shadow-2xs transition-all active:scale-[0.98]"
+            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-850 text-xs font-semibold text-slate-700 dark:text-slate-300 shadow-2xs transition-all active:scale-[0.98]"
             title="Click to sync bank accounts"
+            aria-label="Sync all linked bank accounts"
           >
             <RefreshCw
+              aria-hidden="true"
               className={`w-3.5 h-3.5 text-emerald-600 ${
                 isSyncing ? 'animate-spin' : 'animate-spin-slow'
               }`}
@@ -59,9 +61,11 @@ export const DashboardPage: React.FC = () => {
           {/* Stitch Circled Plus Add Transaction button */}
           <button
             onClick={() => setIsModalOpen(true)}
+            title="Add Transaction"
+            aria-label="Add Transaction"
             className="inline-flex items-center gap-2 px-4 py-2 text-xs font-bold text-white bg-[#065f46] hover:bg-[#054c37] rounded-xl shadow-xs transition-all active:scale-[0.98]"
           >
-            <PlusCircle className="w-4 h-4" />
+            <PlusCircle className="w-4 h-4" aria-hidden="true" />
             <span>Add Transaction</span>
           </button>
         </div>

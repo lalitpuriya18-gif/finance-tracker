@@ -45,9 +45,12 @@ export const ToastContainer: React.FC = () => {
 
           <button
             onClick={() => removeToast(toast.id)}
-            className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-0.5 rounded transition-colors shrink-0"
+            title="Dismiss notification"
+            aria-label="Dismiss notification"
+            className="text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 p-0.5 rounded transition-colors shrink-0"
           >
-            <X className="w-4 h-4" />
+            <X className="w-4 h-4" aria-hidden="true" />
+            <span className="sr-only">Dismiss notification</span>
           </button>
         </div>
       ))}

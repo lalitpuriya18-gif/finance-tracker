@@ -74,9 +74,10 @@ export const Header: React.FC<HeaderProps> = ({ onOpenAddTransaction, onToggleSi
             onClick={onToggleSidebar}
             className="p-1.5 -ml-1 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white rounded-lg transition-colors md:hidden"
             title="Toggle Menu"
-            aria-label="Toggle Menu"
+            aria-label="Toggle navigation menu"
           >
-            <Menu className="w-5 h-5" />
+            <Menu className="w-5 h-5" aria-hidden="true" />
+            <span className="sr-only">Toggle navigation menu</span>
           </button>
 
           <div className="flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-300">
@@ -92,9 +93,10 @@ export const Header: React.FC<HeaderProps> = ({ onOpenAddTransaction, onToggleSi
             onClick={handleGoogleAuth}
             className="inline-flex items-center gap-2 px-3 py-1.5 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-750 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold text-slate-700 dark:text-slate-200 shadow-2xs transition-all active:scale-[0.98]"
             title="Google Account"
+            aria-label="Sign in with Google"
           >
             {/* Google Multi-color G logo */}
-            <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24">
+            <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" aria-hidden="true">
               <path
                 fill="#4285F4"
                 d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -115,16 +117,19 @@ export const Header: React.FC<HeaderProps> = ({ onOpenAddTransaction, onToggleSi
             <span className="hidden sm:inline">
               {isSignedIn ? 'Sign in with Google' : 'Sign in with Google'}
             </span>
+            <span className="sr-only sm:hidden">Sign in with Google</span>
           </button>
 
           {/* Notification Bell */}
           <div className="relative">
             <button
               onClick={() => setIsNotificationsOpen((prev) => !prev)}
-              className="relative p-2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 rounded-lg transition-colors"
+              className="relative p-2 text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200 rounded-lg transition-colors"
               title="Notifications"
+              aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ''}`}
             >
-              <Bell className="w-4 h-4" />
+              <Bell className="w-4 h-4" aria-hidden="true" />
+              <span className="sr-only">Notifications</span>
               {unreadCount > 0 && (
                 <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-white dark:ring-slate-900 animate-pulse" />
               )}
@@ -224,10 +229,13 @@ export const Header: React.FC<HeaderProps> = ({ onOpenAddTransaction, onToggleSi
           {/* Stitch Dark Emerald Primary Action Button */}
           <button
             onClick={onOpenAddTransaction}
+            title="Add Transaction"
+            aria-label="Add Transaction"
             className="inline-flex items-center gap-1.5 px-3 sm:px-3.5 py-1.5 text-xs font-semibold text-white bg-[#065f46] hover:bg-[#054c37] rounded-lg shadow-xs transition-all active:scale-[0.98]"
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="w-4 h-4" aria-hidden="true" />
             <span className="hidden xs:inline">Add Transaction</span>
+            <span className="sr-only xs:hidden">Add Transaction</span>
           </button>
         </div>
       </header>
@@ -238,7 +246,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenAddTransaction, onToggleSi
           <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <svg className="w-5 h-5" viewBox="0 0 24 24">
+                <svg className="w-5 h-5" viewBox="0 0 24 24" aria-hidden="true">
                   <path
                     fill="#4285F4"
                     d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -262,9 +270,12 @@ export const Header: React.FC<HeaderProps> = ({ onOpenAddTransaction, onToggleSi
               </div>
               <button
                 onClick={() => setIsGoogleModalOpen(false)}
-                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 p-1 rounded-md"
+                title="Close"
+                aria-label="Close Google Account modal"
               >
-                <X className="w-4 h-4" />
+                <X className="w-4 h-4" aria-hidden="true" />
+                <span className="sr-only">Close modal</span>
               </button>
             </div>
 
@@ -281,7 +292,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenAddTransaction, onToggleSi
                 <p className="font-bold text-xs text-slate-900 dark:text-slate-100 truncate">
                   {settings.userName || 'FinTrack User'}
                 </p>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
+                <p className="text-[11px] text-slate-600 dark:text-slate-400 truncate">
                   {settings.userEmail || 'user@fintrack.io'}
                 </p>
               </div>
@@ -290,16 +301,17 @@ export const Header: React.FC<HeaderProps> = ({ onOpenAddTransaction, onToggleSi
               </span>
             </div>
 
-            <div className="text-[11px] text-slate-500 dark:text-slate-400">
+            <div className="text-[11px] text-slate-600 dark:text-slate-400">
               Your Stitch financial telemetry and local encrypted vault are securely linked to your account.
             </div>
 
             <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
               <button
                 onClick={handleSignOut}
+                aria-label="Disconnect Google Account"
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition-colors"
               >
-                <LogOut className="w-3.5 h-3.5" />
+                <LogOut className="w-3.5 h-3.5" aria-hidden="true" />
                 <span>Disconnect</span>
               </button>
               <button

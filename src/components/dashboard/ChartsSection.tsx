@@ -93,7 +93,7 @@ export const ChartsSection: React.FC = () => {
               <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
                 Income vs Expenses
               </h3>
-              <p className="text-xs text-slate-400 mt-0.5">
+              <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
                 Monthly operational cashflow comparison (May – Oct 2023)
               </p>
             </div>
@@ -180,21 +180,23 @@ export const ChartsSection: React.FC = () => {
             </h3>
             <Link
               to="/reports"
-              className="p-1 rounded-md text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              className="p-1 rounded-md text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
               title="View Detailed Spending Analytics"
+              aria-label="View Detailed Spending Analytics"
             >
-              <Info className="w-4 h-4" />
+              <Info className="w-4 h-4" aria-hidden="true" />
+              <span className="sr-only">View Detailed Spending Analytics</span>
             </Link>
           </div>
-          <p className="text-xs text-slate-400 mt-0.5">
+          <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
             Live expense distribution
           </p>
         </div>
 
         {categoryData.length === 0 ? (
           <div className="h-56 flex flex-col items-center justify-center text-center p-4">
-            <span className="text-xs font-semibold text-slate-500">No expense records yet</span>
-            <p className="text-[11px] text-slate-400 mt-1 max-w-[200px]">
+            <span className="text-xs font-semibold text-slate-600 dark:text-slate-400">No expense records yet</span>
+            <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-1 max-w-[200px]">
               Add expense transactions to visualize your category spending distribution.
             </p>
           </div>
@@ -221,7 +223,7 @@ export const ChartsSection: React.FC = () => {
               </ResponsiveContainer>
 
               <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">
                   Total Spend
                 </span>
                 <span className="text-base font-extrabold text-slate-900 dark:text-slate-100 tabular-nums">

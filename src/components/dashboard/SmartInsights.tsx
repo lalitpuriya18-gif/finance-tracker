@@ -48,7 +48,7 @@ export const SmartInsights: React.FC = () => {
           <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
             Smart Financial Insights
           </h3>
-          <p className="text-[11px] text-slate-500 dark:text-slate-400">
+          <p className="text-[11px] text-slate-600 dark:text-slate-400">
             Rule-based intelligence derived from your spending patterns
           </p>
         </div>

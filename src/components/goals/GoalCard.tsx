@@ -54,15 +54,21 @@ export const GoalCard: React.FC<GoalCardProps> = ({ goal, onEdit, onContribute }
         <div className="flex items-center gap-1">
           <button
             onClick={onEdit}
-            className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
+            title="Edit goal"
+            aria-label={`Edit goal: ${goal.name}`}
+            className="p-1.5 text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
           >
-            <Edit3 className="w-3.5 h-3.5" />
+            <Edit3 className="w-3.5 h-3.5" aria-hidden="true" />
+            <span className="sr-only">Edit goal</span>
           </button>
           <button
             onClick={() => deleteGoal(goal.id)}
-            className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/40"
+            title="Delete goal"
+            aria-label={`Delete goal: ${goal.name}`}
+            className="p-1.5 text-slate-500 hover:text-rose-600 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/40"
           >
-            <Trash2 className="w-3.5 h-3.5" />
+            <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
+            <span className="sr-only">Delete goal</span>
           </button>
         </div>
       </div>

@@ -343,16 +343,20 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({ onEdit }) =>
                         <button
                           onClick={() => onEdit(tx)}
                           title="Edit transaction"
-                          className="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 rounded hover:bg-slate-100 dark:hover:bg-slate-800"
+                          aria-label={`Edit transaction: ${tx.note || 'entry'}`}
+                          className="p-1 text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 rounded hover:bg-slate-100 dark:hover:bg-slate-800"
                         >
-                          <Edit2 className="w-3.5 h-3.5" />
+                          <Edit2 className="w-3.5 h-3.5" aria-hidden="true" />
+                          <span className="sr-only">Edit transaction</span>
                         </button>
                         <button
                           onClick={() => deleteTransaction(tx.id)}
                           title="Delete transaction"
-                          className="p-1 text-slate-400 hover:text-rose-600 rounded hover:bg-rose-50 dark:hover:bg-rose-950/40"
+                          aria-label={`Delete transaction: ${tx.note || 'entry'}`}
+                          className="p-1 text-slate-500 hover:text-rose-600 rounded hover:bg-rose-50 dark:hover:bg-rose-950/40"
                         >
-                          <Trash2 className="w-3.5 h-3.5" />
+                          <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
+                          <span className="sr-only">Delete transaction</span>
                         </button>
                       </div>
                     </td>

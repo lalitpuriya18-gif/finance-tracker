@@ -37,7 +37,7 @@ export const MonthlyFinancialSummary: React.FC = () => {
             <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 tracking-tight">
               Monthly Financial Summary
             </h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+            <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
               Consolidated cash flow based on live transactions
             </p>
           </div>
@@ -67,10 +67,16 @@ export const MonthlyFinancialSummary: React.FC = () => {
 
           <button
             onClick={() => setIsExpanded(!isExpanded)}
-            className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+            className="p-1 rounded-lg text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
             title={isExpanded ? 'Collapse breakdown' : 'Expand breakdown'}
+            aria-label={isExpanded ? 'Collapse monthly breakdown' : 'Expand monthly breakdown'}
           >
-            {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            {isExpanded ? (
+              <ChevronUp className="w-4 h-4" aria-hidden="true" />
+            ) : (
+              <ChevronDown className="w-4 h-4" aria-hidden="true" />
+            )}
+            <span className="sr-only">{isExpanded ? 'Collapse breakdown' : 'Expand breakdown'}</span>
           </button>
         </div>
       </div>
@@ -80,21 +86,21 @@ export const MonthlyFinancialSummary: React.FC = () => {
         <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800 space-y-4 animate-in fade-in duration-200">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50">
-              <span className="text-[11px] text-slate-500 font-medium">Monthly Inflow</span>
+              <span className="text-[11px] text-slate-600 dark:text-slate-400 font-medium">Monthly Inflow</span>
               <p className="text-base font-bold text-emerald-600 dark:text-emerald-400 tabular-nums mt-0.5">
                 {formatMoney(income, settings.currency)}
               </p>
             </div>
 
             <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50">
-              <span className="text-[11px] text-slate-500 font-medium">Monthly Outflow</span>
+              <span className="text-[11px] text-slate-600 dark:text-slate-400 font-medium">Monthly Outflow</span>
               <p className="text-base font-bold text-rose-600 dark:text-rose-400 tabular-nums mt-0.5">
                 {formatMoney(expense, settings.currency)}
               </p>
             </div>
 
             <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50">
-              <span className="text-[11px] text-slate-500 font-medium">Net Realized Margin</span>
+              <span className="text-[11px] text-slate-600 dark:text-slate-400 font-medium">Net Realized Margin</span>
               <p
                 className={`text-base font-bold tabular-nums mt-0.5 ${
                   net >= 0
@@ -107,7 +113,7 @@ export const MonthlyFinancialSummary: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 pt-1">
+          <div className="flex items-center justify-between text-xs text-slate-600 dark:text-slate-400 pt-1">
             <div className="flex items-center gap-1.5">
               <ShieldCheck className="w-4 h-4 text-emerald-600" />
               <span>Real-time transactional audit verified against linked Indian bank accounts</span>

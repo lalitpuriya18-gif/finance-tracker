@@ -27,15 +27,16 @@ export const MobileTabBar: React.FC = () => {
           <NavLink
             key={tab.to}
             to={tab.to}
+            aria-label={tab.label}
             className={({ isActive }) =>
               `flex flex-col items-center gap-1 py-1 px-2 rounded-lg text-[10px] font-medium transition-colors ${
                 isActive
-                  ? 'text-emerald-600 dark:text-emerald-400 font-bold'
-                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-800'
+                  ? 'text-emerald-700 dark:text-emerald-400 font-bold'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
               }`
             }
           >
-            <Icon className="w-5 h-5" />
+            <Icon className="w-5 h-5" aria-hidden="true" />
             <span>{tab.label}</span>
           </NavLink>
         );

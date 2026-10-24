@@ -61,16 +61,20 @@ export const BudgetCard: React.FC<BudgetCardProps> = ({
           <button
             onClick={onEdit}
             title="Edit budget limit"
-            className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
+            aria-label={`Edit budget for ${category?.name || 'category'}`}
+            className="p-1.5 text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
           >
-            <Edit3 className="w-3.5 h-3.5" />
+            <Edit3 className="w-3.5 h-3.5" aria-hidden="true" />
+            <span className="sr-only">Edit budget limit</span>
           </button>
           <button
             onClick={() => deleteBudget(budget.id)}
             title="Remove budget"
-            className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/40"
+            aria-label={`Remove budget for ${category?.name || 'category'}`}
+            className="p-1.5 text-slate-500 hover:text-rose-600 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/40"
           >
-            <Trash2 className="w-3.5 h-3.5" />
+            <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
+            <span className="sr-only">Remove budget</span>
           </button>
         </div>
       </div>

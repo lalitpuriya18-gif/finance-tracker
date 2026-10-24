@@ -81,7 +81,7 @@ export const RecentTransactions: React.FC = () => {
           <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
             Recent Transactions
           </h3>
-          <p className="text-xs text-slate-400 mt-0.5">
+          <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
             Cleared and pending movements
           </p>
         </div>
@@ -95,8 +95,8 @@ export const RecentTransactions: React.FC = () => {
 
       {displayList.length === 0 ? (
         <div className="text-center py-8">
-          <Receipt className="w-10 h-10 text-slate-300 dark:text-slate-600 mx-auto mb-2" />
-          <p className="text-xs font-semibold text-slate-500">No transactions recorded yet.</p>
+          <Receipt className="w-10 h-10 text-slate-400 dark:text-slate-500 mx-auto mb-2 opacity-60" />
+          <p className="text-xs font-semibold text-slate-600 dark:text-slate-400">No transactions recorded yet.</p>
         </div>
       ) : (
         <div className="divide-y divide-slate-100 dark:divide-slate-800 mt-2">
@@ -135,7 +135,7 @@ export const RecentTransactions: React.FC = () => {
                         {cat.name}
                       </span>
                     </div>
-                    <p className="text-xs text-slate-400 mt-0.5 truncate">
+                    <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5 truncate">
                       {subtext}
                     </p>
                   </div>

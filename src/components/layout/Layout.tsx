@@ -29,9 +29,11 @@ export const Layout: React.FC = () => {
               <button
                 onClick={() => setIsMobileMenuOpen(false)}
                 className="p-1.5 rounded-lg text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white"
+                title="Close menu"
                 aria-label="Close menu"
               >
-                <X className="w-5 h-5" />
+                <X className="w-5 h-5" aria-hidden="true" />
+                <span className="sr-only">Close menu</span>
               </button>
             </div>
             <div className="flex-1 overflow-y-auto" onClick={() => setIsMobileMenuOpen(false)}>

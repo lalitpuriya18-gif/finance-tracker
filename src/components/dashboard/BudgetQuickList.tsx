@@ -50,20 +50,22 @@ export const BudgetQuickList: React.FC = () => {
           </h3>
           <Link
             to="/budgets"
-            className="p-1 rounded-md text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            className="p-1 rounded-md text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
             title="Adjust Budget Limits"
+            aria-label="Adjust Budget Limits"
           >
-            <SlidersHorizontal className="w-4 h-4" />
+            <SlidersHorizontal className="w-4 h-4" aria-hidden="true" />
+            <span className="sr-only">Adjust Budget Limits</span>
           </Link>
         </div>
-        <p className="text-xs text-slate-400 mt-0.5">
+        <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
           Spending velocity for current billing cycle
         </p>
 
         {calculatedBudgets.length === 0 ? (
           <div className="text-center py-6 space-y-2">
-            <p className="text-xs font-semibold text-slate-500">No active category budgets yet.</p>
-            <p className="text-[11px] text-slate-400 max-w-[200px] mx-auto">
+            <p className="text-xs font-semibold text-slate-600 dark:text-slate-400">No active category budgets yet.</p>
+            <p className="text-[11px] text-slate-600 dark:text-slate-400 max-w-[200px] mx-auto">
               Set spending limits for your categories to track pace.
             </p>
             <Link
@@ -101,7 +103,7 @@ export const BudgetQuickList: React.FC = () => {
                   />
                 </div>
 
-                <div className="flex items-center justify-between text-[11px] text-slate-400 font-medium">
+                <div className="flex items-center justify-between text-[11px] text-slate-600 dark:text-slate-400 font-medium">
                   <span>{b.spent}</span>
                   <span>{b.cap}</span>
                 </div>
