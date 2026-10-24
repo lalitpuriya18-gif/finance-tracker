@@ -1,0 +1,39 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    @apply border-slate-200 dark:border-slate-800;
+  }
+  
+  body {
+    min-height: 100vh;
+  }
+}
+
+/* Tabular figures for aligned financial numbers */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Print view styling for reports */
+@media print {
+  aside, nav, header, button, .no-print {
+    display: none !important;
+  }
+  body, main {
+    background: white !important;
+    color: black !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+  .print-only {
+    display: block !important;
+  }
+  .card-print {
+    box-shadow: none !important;
+    border: 1px solid #e2e8f0 !important;
+    break-inside: avoid;
+  }
+}
