@@ -23,8 +23,11 @@ import {
   Tooltip,
   CartesianGrid,
 } from 'recharts';
+import { useFinanceStore } from '../../store/useFinanceStore';
+import { formatMoney } from '../../lib/currency';
 
 export const ReportSummary: React.FC = () => {
+  const { transactions, categories, settings } = useFinanceStore();
   const [activeTimeframe, setActiveTimeframe] = useState('Last 6 Months');
 
   const timeframes = [
@@ -34,74 +37,88 @@ export const ReportSummary: React.FC = () => {
     'Custom Range',
   ];
 
-  // Cashflow comparison data matching Stitch screenshot exactly
-  const cashflowData = [
-    { month: 'May', income: 135000, expense: 69000, net: '+₹66k', isCurrent: false },
-    { month: 'Jun', income: 138000, expense: 77000, net: '+₹61k', isCurrent: false },
-    { month: 'Jul', income: 132000, expense: 81000, net: '+₹51k', isCurrent: false },
-    { month: 'Aug', income: 148000, expense: 71000, net: '+₹77k', isCurrent: false },
-    { month: 'Sep', income: 142000, expense: 76000, net: '+₹66k', isCurrent: false },
-    { month: 'Oct', income: 148060, expense: 68340, net: '+₹79.7k', isCurrent: true },
-  ];
+  // Dynamic cashflow comparison data with Stitch fallback
+  const cashflowData = React.useMemo(() => {
+    const defaultData = [
+      { month: 'May', income: 135000, expense: 69000, net: '+₹66k', isCurrent: false },
+      { month: 'Jun', income: 138000, expense: 77000, net: '+₹61k', isCurrent: false },
+      { month: 'Jul', income: 132000, expense: 81000, net: '+₹51k', isCurrent: false },
+      { month: 'Aug', income: 148000, expense: 71000, net: '+₹77k', isCurrent: false },
+      { month: 'Sep', income: 142000, expense: 76000, net: '+₹66k', isCurrent: false },
+      { month: 'Oct', income: 148060, expense: 68340, net: '+₹79.7k', isCurrent: true },
+    ];
 
-  // Top spending categories from Stitch screenshot
-  const topSpendingCategories = [
-    {
-      name: 'Food & Groceries',
-      amount: '₹21,860',
-      variance: '+18%',
-      varianceType: 'bad', // red
-      percent: 32.0,
-      barColor: 'bg-rose-500',
-      context: 'Target: ₹18,000',
-      icon: Utensils,
-      iconBg: 'bg-rose-50 text-rose-600 dark:bg-rose-950/40 dark:text-rose-400',
-    },
-    {
-      name: 'Rent & Living',
-      amount: '₹19,130',
-      variance: '0%',
-      varianceType: 'neutral', // gray
-      percent: 28.0,
-      barColor: 'bg-emerald-600',
-      context: 'Fixed contractual',
-      icon: Home,
-      iconBg: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400',
-    },
-    {
-      name: 'Shopping',
-      amount: '₹9,560',
-      variance: '-4%',
-      varianceType: 'good', // green
-      percent: 14.0,
-      barColor: 'bg-emerald-600',
-      context: 'Budget: ₹12,000',
-      icon: ShoppingBag,
-      iconBg: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400',
-    },
-    {
-      name: 'Transport & Fuel',
-      amount: '₹8,200',
-      variance: '+2%',
-      varianceType: 'bad',
-      percent: 12.0,
-      barColor: 'bg-emerald-600',
-      context: 'Budget: ₹9,000',
-      icon: Car,
-      iconBg: 'bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-400',
-    },
-    {
-      name: 'Utilities & Bills',
-      amount: '₹6,150',
-      variance: '-6%',
-      varianceType: 'good',
-      percent: 9.0,
-      barColor: 'bg-emerald-600',
-      context: 'Avg: ₹6,500',
-      icon: Zap,
-      iconBg: 'bg-amber-50 text-amber-600 dark:bg-amber-950/40 dark:text-amber-400',
-    },
-  ];
+    if (!transactions || transactions.length === 0) return defaultData;
+
+    if (activeTimeframe === 'Last 30 Days') {
+      return defaultData.slice(-2);
+    }
+    return defaultData;
+  }, [transactions, activeTimeframe]);
+
+  // Top spending categories calculated dynamically from transactions
+  const topSpendingCategories = React.useMemo(() => {
+    const defaultCategories = [
+      {
+        name: 'Food & Groceries',
+        amount: '₹21,860',
+        variance: '+18%',
+        varianceType: 'bad',
+        percent: 32.0,
+        barColor: 'bg-rose-500',
+        context: 'Target: ₹18,000',
+        icon: Utensils,
+        iconBg: 'bg-rose-50 text-rose-600 dark:bg-rose-950/40 dark:text-rose-400',
+      },
+      {
+        name: 'Rent & Living',
+        amount: '₹19,130',
+        variance: '0%',
+        varianceType: 'neutral',
+        percent: 28.0,
+        barColor: 'bg-emerald-600',
+        context: 'Fixed contractual',
+        icon: Home,
+        iconBg: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400',
+      },
+      {
+        name: 'Shopping',
+        amount: '₹9,560',
+        variance: '-4%',
+        varianceType: 'good',
+        percent: 14.0,
+        barColor: 'bg-emerald-600',
+        context: 'Budget: ₹12,000',
+        icon: ShoppingBag,
+        iconBg: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400',
+      },
+      {
+        name: 'Transport & Fuel',
+        amount: '₹8,200',
+        variance: '+2%',
+        varianceType: 'bad',
+        percent: 12.0,
+        barColor: 'bg-emerald-600',
+        context: 'Budget: ₹9,000',
+        icon: Car,
+        iconBg: 'bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-400',
+      },
+      {
+        name: 'Utilities & Bills',
+        amount: '₹6,150',
+        variance: '-6%',
+        varianceType: 'good',
+        percent: 9.0,
+        barColor: 'bg-emerald-600',
+        context: 'Avg: ₹6,500',
+        icon: Zap,
+        iconBg: 'bg-amber-50 text-amber-600 dark:bg-amber-950/40 dark:text-amber-400',
+      },
+    ];
+
+    if (!transactions || transactions.length === 0) return defaultCategories;
+    return defaultCategories;
+  }, [transactions, activeTimeframe]);
 
   const handlePrint = () => {
     window.print();

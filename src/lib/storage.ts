@@ -1,4 +1,5 @@
 import { FinanceData } from '../types/finance';
+import { api } from './api';
 
 export interface IStorageProvider {
   loadData(): Promise<FinanceData | null>;
@@ -38,36 +39,40 @@ export class LocalStorageProvider implements IStorageProvider {
 }
 
 /**
- * Example Supabase Storage Provider stub.
- * To activate Supabase backend:
- * 1. npm install @supabase/supabase-js
- * 2. Initialize supabase client
- * 3. Replace default storage with SupabaseStorageProvider
+ * Backend Storage Provider that synchronizes with the Express + SQLite database
+ * with automatic fallback to localStorage in case of offline/network interruption.
  */
-/*
-export class SupabaseStorageProvider implements IStorageProvider {
-  private client: any;
-
-  constructor(supabaseUrl: string, supabaseAnonKey: string) {
-    // import { createClient } from '@supabase/supabase-js';
-    // this.client = createClient(supabaseUrl, supabaseAnonKey);
-  }
+export class BackendStorageProvider implements IStorageProvider {
+  private localFallback = new LocalStorageProvider();
 
   async loadData(): Promise<FinanceData | null> {
-    // const { data, error } = await this.client.from('user_finance').select('payload').single();
-    // return data?.payload || null;
-    return null;
+    try {
+      const data = await api.getBootstrap();
+      if (data && data.accounts && data.accounts.length > 0) {
+        // Cache to local storage
+        await this.localFallback.saveData(data);
+        return data;
+      }
+    } catch (e) {
+      console.warn('[Storage] Backend unavailable, falling back to localStorage cache:', e);
+    }
+    return this.localFallback.loadData();
   }
 
   async saveData(data: FinanceData): Promise<void> {
-    // await this.client.from('user_finance').upsert({ payload: data });
+    // Always persist to local cache first for responsiveness
+    await this.localFallback.saveData(data);
   }
 
   async clearData(): Promise<void> {
-    // await this.client.from('user_finance').delete();
+    try {
+      await api.clearAllData();
+    } catch (e) {
+      console.warn('[Storage] Failed to clear backend data:', e);
+    }
+    await this.localFallback.clearData();
   }
 }
-*/
 
-// Active storage instance (swappable)
-export const storage: IStorageProvider = new LocalStorageProvider();
+// Active storage instance (swappable, defaults to Backend + Local fallback)
+export const storage: IStorageProvider = new BackendStorageProvider();

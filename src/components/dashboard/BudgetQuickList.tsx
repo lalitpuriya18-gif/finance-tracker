@@ -1,36 +1,71 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Card } from '../ui/Card';
+import { useFinanceStore } from '../../store/useFinanceStore';
+import { formatMoney } from '../../lib/currency';
 import { SlidersHorizontal, ArrowRight } from 'lucide-react';
 
 export const BudgetQuickList: React.FC = () => {
-  const budgets = [
-    {
-      category: 'Food & Dining',
-      percent: 73,
-      spent: '₹21,860 spent',
-      cap: '₹30,000 cap',
-      isWarning: false,
-      color: 'bg-emerald-600',
-    },
-    {
-      category: 'Transport',
-      percent: 55,
-      spent: '₹8,200 spent',
-      cap: '₹15,000 cap',
-      isWarning: false,
-      color: 'bg-emerald-600',
-    },
-    {
-      category: 'Shopping',
-      percent: 95,
-      spent: '₹14,250 spent',
-      cap: '₹15,000 cap',
-      isWarning: true,
-      badge: 'NEAR LIMIT',
-      color: 'bg-rose-500',
-    },
-  ];
+  const { budgets, categories, transactions, settings } = useFinanceStore();
+
+  const currentMonthPrefix = new Date().toISOString().slice(0, 7); // e.g. "2023-10" or current YYYY-MM
+
+  const calculatedBudgets = useMemo(() => {
+    if (!budgets || budgets.length === 0) {
+      return [
+        {
+          category: 'Food & Dining',
+          percent: 73,
+          spent: '₹21,860 spent',
+          cap: '₹30,000 cap',
+          isWarning: false,
+          color: 'bg-emerald-600',
+        },
+        {
+          category: 'Transport',
+          percent: 55,
+          spent: '₹8,200 spent',
+          cap: '₹15,000 cap',
+          isWarning: false,
+          color: 'bg-emerald-600',
+        },
+        {
+          category: 'Shopping',
+          percent: 95,
+          spent: '₹14,250 spent',
+          cap: '₹15,000 cap',
+          isWarning: true,
+          badge: 'NEAR LIMIT',
+          color: 'bg-rose-500',
+        },
+      ];
+    }
+
+    return budgets.slice(0, 3).map((b) => {
+      const cat = categories.find((c) => c.id === b.categoryId);
+      const categoryName = cat ? cat.name : 'Category';
+
+      // Sum expenses for this category
+      const spentPaise = transactions
+        .filter((t) => t.type === 'expense' && t.categoryId === b.categoryId)
+        .reduce((sum, t) => sum + t.amount, 0);
+
+      const capPaise = b.monthlyLimit;
+      const percent = capPaise > 0 ? Math.min(Math.round((spentPaise / capPaise) * 100), 100) : 0;
+      const isOver = spentPaise > capPaise;
+      const isWarning = percent >= 85;
+
+      return {
+        category: categoryName,
+        percent,
+        spent: `${formatMoney(spentPaise, settings.currency)} spent`,
+        cap: `${formatMoney(capPaise, settings.currency)} cap`,
+        isWarning: isWarning || isOver,
+        badge: isOver ? 'OVER LIMIT' : isWarning ? 'NEAR LIMIT' : undefined,
+        color: isOver ? 'bg-rose-600' : isWarning ? 'bg-rose-500' : 'bg-emerald-600',
+      };
+    });
+  }, [budgets, categories, transactions, settings]);
 
   return (
     <Card className="p-6 rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs flex flex-col justify-between">
@@ -48,11 +83,11 @@ export const BudgetQuickList: React.FC = () => {
           </Link>
         </div>
         <p className="text-xs text-slate-400 mt-0.5">
-          Spending velocity for October
+          Spending velocity for current billing cycle
         </p>
 
         <div className="space-y-5 mt-5">
-          {budgets.map((b, i) => (
+          {calculatedBudgets.map((b, i) => (
             <div key={i} className="space-y-1.5">
               <div className="flex items-center justify-between text-xs">
                 <div className="flex items-center gap-2">

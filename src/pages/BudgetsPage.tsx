@@ -31,9 +31,13 @@ import {
   CartesianGrid,
 } from 'recharts';
 
+import { formatMoney } from '../lib/currency';
+
 export const BudgetsPage: React.FC = () => {
-  const { addToast } = useFinanceStore();
+  const { budgets, categories, transactions, settings, deleteBudget, addToast } = useFinanceStore();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
+  const [currentLimit, setCurrentLimit] = useState<number | undefined>(undefined);
   const [isExpenseOpen, setIsExpenseOpen] = useState(false);
   const [selectedCategoryName, setSelectedCategoryName] = useState<string>('Food & Dining');
 
@@ -46,108 +50,90 @@ export const BudgetsPage: React.FC = () => {
   const months = ['September 2023', 'October 2023', 'November 2023'];
   const [monthIndex, setMonthIndex] = useState(1);
 
-  // 6 Category budgets matching the Stitch screenshot
-  const rawBudgetList = [
-    {
-      id: 'b-1',
-      title: 'Food & Dining',
-      subtitle: '14 logged transactions',
-      icon: Utensils,
-      statusBadge: 'On Track',
-      statusClass: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400',
-      percent: 73,
-      percentText: '73%',
-      ringColor: '#047857',
-      limit: '₹30,000',
-      disbursed: '₹21,860',
-      remaining: '₹8,140',
-      dailyText: 'Daily safe allowance:',
-      dailyVal: '₹1,356 / day',
-    },
-    {
-      id: 'b-2',
-      title: 'Transport & Commute',
-      subtitle: 'Fuel, Metro & Cabs',
-      icon: Car,
-      statusBadge: 'On Track',
-      statusClass: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400',
-      percent: 55,
-      percentText: '55%',
-      ringColor: '#047857',
-      limit: '₹15,000',
-      disbursed: '₹8,200',
-      remaining: '₹6,800',
-      dailyText: 'Daily safe allowance:',
-      dailyVal: '₹1,133 / day',
-    },
-    {
-      id: 'b-3',
-      title: 'Shopping & Discretionary',
-      subtitle: '8 items • Clothing & Tech',
-      icon: ShoppingBag,
-      statusBadge: 'Over Limit',
-      statusClass: 'bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400',
-      percent: 106,
-      percentText: '106%',
-      ringColor: '#dc2626',
-      limit: '₹15,000',
-      disbursed: '₹15,900',
-      remaining: '-₹900',
-      isAlert: true,
-      alertBanner: '⚠️ Exceeded by ₹900 (Deficit absorbed by buffer)',
-      primaryBtnText: 'Review Overrun',
-      primaryBtnClass: 'bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 hover:bg-rose-100',
-    },
-    {
-      id: 'b-4',
-      title: 'Utilities & Power',
-      subtitle: 'Electricity, Water, Wi-Fi',
-      icon: Zap,
-      statusBadge: 'On Track',
-      statusClass: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400',
-      percent: 56,
-      percentText: '56%',
-      ringColor: '#047857',
-      limit: '₹8,000',
-      disbursed: '₹4,500',
-      remaining: '₹3,500',
-      dailyText: 'Autopay buffer:',
-      dailyVal: 'Safe',
-    },
-    {
-      id: 'b-5',
-      title: 'Entertainment & OTT',
-      subtitle: 'Cinema, Streaming, Events',
-      icon: Tv,
-      statusBadge: 'Near Limit',
-      statusClass: 'bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400',
-      percent: 96,
-      percentText: '96% CRITICAL',
-      ringColor: '#dc2626',
-      limit: '₹5,000',
-      disbursed: '₹4,800',
-      remaining: '₹200',
-      dailyText: 'Discretionary freeze:',
-      dailyVal: 'Recommended',
-      valIsWarning: true,
-    },
-    {
-      id: 'b-6',
-      title: 'Health & Wellness',
-      subtitle: 'Pharmacy & Routine Care',
-      icon: HeartPulse,
-      statusBadge: 'Well Managed',
-      statusClass: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400',
-      percent: 26,
-      percentText: '26%',
-      ringColor: '#047857',
-      limit: '₹12,000',
-      disbursed: '₹3,060',
-      remaining: '₹8,940',
-      dailyText: 'Daily safe allowance:',
-      dailyVal: '₹1,490 / day',
-    },
-  ];
+  const getCategoryIcon = (name: string) => {
+    const lower = name.toLowerCase();
+    if (lower.includes('food') || lower.includes('dining')) return Utensils;
+    if (lower.includes('transport') || lower.includes('commute')) return Car;
+    if (lower.includes('shopping')) return ShoppingBag;
+    if (lower.includes('util') || lower.includes('power') || lower.includes('bill')) return Zap;
+    if (lower.includes('entertain') || lower.includes('ott')) return Tv;
+    if (lower.includes('health') || lower.includes('well')) return HeartPulse;
+    return ShoppingBag;
+  };
+
+  // Dynamic Category budgets from useFinanceStore
+  const rawBudgetList = useMemo(() => {
+    if (!budgets || budgets.length === 0) return [];
+
+    return budgets.map((b) => {
+      const cat = categories.find((c) => c.id === b.categoryId);
+      const catName = cat ? cat.name : 'Category';
+      const icon = getCategoryIcon(catName);
+
+      const catTxs = transactions.filter((t) => t.type === 'expense' && t.categoryId === b.categoryId);
+      const disbursedPaise = catTxs.reduce((sum, t) => sum + t.amount, 0);
+      const limitPaise = b.monthlyLimit;
+      const remainingPaise = limitPaise - disbursedPaise;
+      const percent = limitPaise > 0 ? Math.round((disbursedPaise / limitPaise) * 100) : 0;
+      const isOver = percent > 100;
+      const isWarning = percent >= 85 && !isOver;
+
+      const dailyAllowance = remainingPaise > 0 ? Math.round(remainingPaise / 6) : 0;
+
+      let statusBadge = 'On Track';
+      let statusClass = 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400';
+      if (isOver) {
+        statusBadge = 'Over Limit';
+        statusClass = 'bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400';
+      } else if (isWarning) {
+        statusBadge = 'Near Limit';
+        statusClass = 'bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400';
+      } else if (percent < 30) {
+        statusBadge = 'Well Managed';
+      }
+
+      return {
+        id: b.id,
+        categoryId: b.categoryId,
+        monthlyLimitPaise: b.monthlyLimit,
+        disbursedPaise,
+        remainingPaise,
+        title: catName,
+        subtitle: `${catTxs.length} logged transactions`,
+        icon,
+        statusBadge,
+        statusClass,
+        percent,
+        percentText: isOver ? `${percent}% CRITICAL` : `${percent}%`,
+        ringColor: isOver || isWarning ? '#dc2626' : '#047857',
+        limit: formatMoney(limitPaise, settings.currency),
+        disbursed: formatMoney(disbursedPaise, settings.currency),
+        remaining: formatMoney(remainingPaise, settings.currency),
+        dailyText: isOver ? 'Discretionary freeze:' : 'Daily safe allowance:',
+        dailyVal: isOver ? 'Recommended' : `${formatMoney(dailyAllowance, settings.currency)} / day`,
+        valIsWarning: isOver || isWarning,
+        isAlert: isOver,
+        alertBanner: `⚠️ Exceeded by ${formatMoney(Math.abs(remainingPaise), settings.currency)} (Deficit absorbed by buffer)`,
+        primaryBtnText: isOver ? 'Review Overrun' : '+ Add Expense',
+        primaryBtnClass: isOver ? 'bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 hover:bg-rose-100' : undefined,
+      };
+    });
+  }, [budgets, categories, transactions, settings]);
+
+  const portfolioMetrics = useMemo(() => {
+    const totalAllocated = rawBudgetList.reduce((s, b) => s + b.monthlyLimitPaise, 0);
+    const totalDisbursed = rawBudgetList.reduce((s, b) => s + b.disbursedPaise, 0);
+    const buffer = totalAllocated - totalDisbursed;
+    const util = totalAllocated > 0 ? ((totalDisbursed / totalAllocated) * 100).toFixed(1) : '0.0';
+    return {
+      allocated: formatMoney(totalAllocated, settings.currency),
+      disbursed: formatMoney(totalDisbursed, settings.currency),
+      buffer: formatMoney(buffer, settings.currency),
+      utilPercent: `${util}%`,
+      utilRaw: Number(util),
+      enrolledCount: rawBudgetList.length,
+    };
+  }, [rawBudgetList, settings]);
 
   // Burn rate trajectory data matching the chart
   const burnRateData = [
@@ -319,9 +305,9 @@ export const BudgetsPage: React.FC = () => {
               Total Allocation
             </span>
             <div className="text-2xl font-bold text-slate-900 dark:text-slate-100 tabular-nums mt-0.5">
-              ₹85,000.00
+              {portfolioMetrics.allocated}
             </div>
-            <span className="text-xs text-slate-400 mt-1 block">6 Active category ceilings</span>
+            <span className="text-xs text-slate-400 mt-1 block">{portfolioMetrics.enrolledCount} Active category ceilings</span>
           </div>
 
           <div>
@@ -329,9 +315,9 @@ export const BudgetsPage: React.FC = () => {
               Total Disbursed
             </span>
             <div className="text-2xl font-bold text-slate-900 dark:text-slate-100 tabular-nums mt-0.5">
-              ₹58,320.00 <span className="text-sm text-slate-400 font-semibold">68.6%</span>
+              {portfolioMetrics.disbursed} <span className="text-sm text-slate-400 font-semibold">{portfolioMetrics.utilPercent}</span>
             </div>
-            <span className="text-xs text-slate-400 mt-1 block">Velocity: ~₹2,332 / day actual</span>
+            <span className="text-xs text-slate-400 mt-1 block">Velocity: active billing cycle</span>
           </div>
 
           <div>
@@ -339,24 +325,31 @@ export const BudgetsPage: React.FC = () => {
               Buffer Available
             </span>
             <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 tabular-nums mt-0.5">
-              ₹26,680.00
+              {portfolioMetrics.buffer}
             </div>
-            <span className="text-xs text-slate-400 mt-1 block">₹4,446 / day safe burn rate</span>
+            <span className="text-xs text-slate-400 mt-1 block">Safe margin remaining</span>
           </div>
         </div>
 
         <div className="space-y-1.5 pt-2">
           <div className="flex justify-between text-xs text-slate-500 font-medium">
             <span>Aggregated Budget Utilization</span>
-            <span>68.6% Expended</span>
+            <span>{portfolioMetrics.utilPercent} Expended</span>
           </div>
           <div className="w-full bg-slate-100 dark:bg-slate-800 h-2.5 rounded-full overflow-hidden">
-            <div className="h-full bg-emerald-600 rounded-full" style={{ width: '68.6%' }} />
+            <div
+              className={`h-full rounded-full transition-all duration-500 ${
+                portfolioMetrics.utilRaw > 100 ? 'bg-rose-600' : 'bg-emerald-600'
+              }`}
+              style={{ width: `${Math.min(portfolioMetrics.utilRaw, 100)}%` }}
+            />
           </div>
           <div className="flex justify-between text-[11px] text-slate-400 font-medium">
-            <span>Spent: ₹58,320.00</span>
-            <span className="text-emerald-600 font-semibold">Safe Margin Remaining</span>
-            <span>Limit: ₹85,000.00</span>
+            <span>Spent: {portfolioMetrics.disbursed}</span>
+            <span className={portfolioMetrics.utilRaw > 100 ? 'text-rose-600 font-semibold' : 'text-emerald-600 font-semibold'}>
+              {portfolioMetrics.utilRaw > 100 ? 'Exceeded Budget' : 'Safe Margin Remaining'}
+            </span>
+            <span>Limit: {portfolioMetrics.allocated}</span>
           </div>
         </div>
       </Card>
@@ -433,6 +426,8 @@ export const BudgetsPage: React.FC = () => {
                         <button
                           onClick={() => {
                             setActiveMenuId(null);
+                            setEditingCategoryId(item.categoryId);
+                            setCurrentLimit(item.monthlyLimitPaise);
                             setIsModalOpen(true);
                           }}
                           className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200"
@@ -447,6 +442,15 @@ export const BudgetsPage: React.FC = () => {
                           className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200"
                         >
                           Log Expense
+                        </button>
+                        <button
+                          onClick={() => {
+                            setActiveMenuId(null);
+                            deleteBudget(item.id);
+                          }}
+                          className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/40 text-rose-600 dark:text-rose-400"
+                        >
+                          Delete Budget
                         </button>
                       </div>
                     )}
@@ -537,7 +541,11 @@ export const BudgetsPage: React.FC = () => {
                   {item.primaryBtnText || '+ Add Expense'}
                 </button>
                 <button
-                  onClick={() => setIsModalOpen(true)}
+                  onClick={() => {
+                    setEditingCategoryId(item.categoryId);
+                    setCurrentLimit(item.monthlyLimitPaise);
+                    setIsModalOpen(true);
+                  }}
                   className="px-3 py-1.5 text-xs font-semibold text-slate-500 hover:text-slate-800 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800"
                 >
                   Edit Limit
@@ -663,7 +671,13 @@ export const BudgetsPage: React.FC = () => {
 
       <BudgetModal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        onClose={() => {
+          setIsModalOpen(false);
+          setEditingCategoryId(null);
+          setCurrentLimit(undefined);
+        }}
+        editCategoryId={editingCategoryId}
+        currentLimit={currentLimit}
       />
 
       <TransactionModal

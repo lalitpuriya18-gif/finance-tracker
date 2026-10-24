@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Card } from '../components/ui/Card';
 import { GoalModal } from '../components/goals/GoalModal';
 import { ContributionModal } from '../components/goals/ContributionModal';
 import { Goal } from '../types/finance';
 import { useFinanceStore } from '../store/useFinanceStore';
+import { formatMoney } from '../lib/currency';
 import {
   CreditCard,
   RotateCcw,
@@ -23,213 +24,144 @@ import {
 } from 'lucide-react';
 
 export const GoalsPage: React.FC = () => {
-  const { addToast } = useFinanceStore();
+  const { goals, mandates: storeMandates, settings, deleteGoal, toggleMandate, addToast } = useFinanceStore();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
   const [contributeGoal, setContributeGoal] = useState<Goal | null>(null);
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
   const [isArchiveOpen, setIsArchiveOpen] = useState(false);
 
-  const [mandates, setMandates] = useState([
+  // Fallback default mandates if not initialized
+  const defaultMandates = [
     {
       id: 'm-1',
-      name: 'Emergency Reserve SIP',
-      type: 'Auto-Debit (ICICI)',
-      date: '1st of every month',
-      allocation: '₹20,000.00',
-      completion: 'Feb 2024 (4 mos)',
-      status: 'Active',
-      statusClass: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400',
+      goalName: 'Emergency Reserve SIP',
+      mandateType: 'Auto-Debit (ICICI)',
+      cycleDate: '1st of every month',
+      monthlyAllocation: 2000000,
+      estCompletion: 'Feb 2024 (4 mos)',
+      status: 'Active' as const,
     },
     {
       id: 'm-2',
-      name: 'Goa Getaway Sweep',
-      type: 'Weekly Auto-Sweep',
-      date: 'Every Monday',
-      allocation: '₹2,500.00',
-      completion: 'Dec 2023 (6 wks)',
-      status: 'Active',
-      statusClass: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400',
+      goalName: 'Goa Getaway Sweep',
+      mandateType: 'Weekly Auto-Sweep',
+      cycleDate: 'Every Monday',
+      monthlyAllocation: 250000,
+      estCompletion: 'Dec 2023 (6 wks)',
+      status: 'Active' as const,
     },
     {
       id: 'm-3',
-      name: 'MacBook Pro Tech Fund',
-      type: 'Salary Day Mandate',
-      date: '28th of every month',
-      allocation: '₹15,000.00',
-      completion: 'Jan 2024 (3 mos)',
-      status: 'Active',
-      statusClass: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400',
+      goalName: 'MacBook Pro Tech Fund',
+      mandateType: 'Salary Day Mandate',
+      cycleDate: '28th of every month',
+      monthlyAllocation: 1500000,
+      estCompletion: 'Jan 2024 (3 mos)',
+      status: 'Active' as const,
     },
     {
       id: 'm-4',
-      name: 'Angel Syndicate Sinking Fund',
-      type: 'Discretionary Surplus',
-      date: 'Bi-Monthly',
-      allocation: '₹10,000.00',
-      completion: 'Mar 2024 (5 mos)',
-      status: 'Paused',
-      statusClass: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400',
+      goalName: 'Angel Syndicate Sinking Fund',
+      mandateType: 'Discretionary Surplus',
+      cycleDate: 'Bi-Monthly',
+      monthlyAllocation: 1000000,
+      estCompletion: 'Mar 2024 (5 mos)',
+      status: 'Paused' as const,
     },
-  ]);
+  ];
+
+  const currentMandates = storeMandates && storeMandates.length > 0 ? storeMandates : defaultMandates;
 
   const handleToggleMandate = (id: string) => {
-    setMandates((prev) =>
-      prev.map((m) => {
-        if (m.id === id) {
-          const newStatus = m.status === 'Active' ? 'Paused' : 'Active';
-          addToast({
-            title: `Mandate ${newStatus}`,
-            description: `${m.name} has been ${newStatus.toLowerCase()}.`,
-            type: newStatus === 'Active' ? 'success' : 'info',
-          });
-          return {
-            ...m,
-            status: newStatus,
-            statusClass:
-              newStatus === 'Active'
-                ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400'
-                : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400',
-          };
-        }
-        return m;
-      })
-    );
+    toggleMandate(id);
+    const target = currentMandates.find((m) => m.id === id);
+    const newStatus = target?.status === 'Active' ? 'Paused' : 'Active';
+    addToast({
+      title: `Mandate ${newStatus}`,
+      description: `${target?.goalName || 'Mandate'} has been ${newStatus.toLowerCase()}.`,
+      type: newStatus === 'Active' ? 'success' : 'info',
+    });
   };
 
   const handleRebalanceRules = () => {
     addToast({
       title: 'Mandates Optimized',
-      description: 'Synchronized 4 recurring debit schedules with linked ICICI Salary Account.',
+      description: 'Synchronized recurring debit schedules with linked bank accounts.',
       type: 'success',
     });
   };
 
-  // 5 Goal Cards matching Stitch screenshot
-  const goalCards = [
-    {
-      id: 'g-1',
-      title: 'Goa Luxury Getaway',
-      subtitle: 'Target: Dec 2023 • 6 weeks left',
-      icon: Palmtree,
-      iconClass: 'bg-amber-50 text-amber-600 dark:bg-amber-950/40 dark:text-amber-400',
-      badge: 'HIGH PRIORITY',
-      badgeClass: 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400',
-      current: '₹85,000',
-      target: '₹1,20,000',
-      percent: 71,
-      percentText: '71% FUNDED',
-      remainingText: '₹35,000 remaining',
-      subInfo1: 'Weekly SIP Required:',
-      subInfo2: '₹5,833 / wk',
-      subInfo2Alert: true,
-      buttonText: 'Contribute',
-      hasEditBtn: true,
-    },
-    {
-      id: 'g-2',
-      title: 'Emergency Fund (6 Months)',
-      subtitle: 'Target: Mar 2024 • 5 months left',
-      icon: Shield,
-      iconClass: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400',
-      badge: 'CRITICAL SHIELD',
-      badgeClass: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400',
-      current: '₹4,50,000',
-      target: '₹6,00,000',
-      percent: 75,
-      percentText: '75% FUNDED',
-      remainingText: '₹1,50,000 remaining',
-      subInfo1: 'Monthly Allocation:',
-      subInfo2: '₹30,000 / mo',
-      sipText: 'Next SIP Deduction:',
-      sipVal: 'Nov 01 (₹30k)',
-      buttonText: 'Deposit Funds',
-      hasEditBtn: false,
-    },
-    {
-      id: 'g-3',
-      title: 'MacBook Pro M3 Max',
-      subtitle: 'Target: Jan 2024 • 3 months left',
-      icon: Laptop,
-      iconClass: 'bg-purple-50 text-purple-600 dark:bg-purple-950/40 dark:text-purple-400',
-      badge: 'HARDWARE UPGRADE',
-      badgeClass: 'bg-purple-50 text-purple-700 dark:bg-purple-950/40 dark:text-purple-400',
-      current: '₹1,90,000',
-      target: '₹2,50,000',
-      percent: 76,
-      percentText: '76% FUNDED',
-      remainingText: '₹60,000 remaining',
-      subInfo1: 'Deduction Source:',
-      subInfo2: 'ICICI Salary A/c',
-      paceBadge: '⚡ 12 days ahead of pace schedule',
-      buttonText: 'Contribute',
-      hasEditBtn: true,
-    },
-    {
-      id: 'g-4',
-      title: 'Sovereign Gold Bonds (Tranche IV)',
-      subtitle: 'Target: Nov 2023 • 3 weeks left',
-      icon: Coins,
-      iconClass: 'bg-amber-50 text-amber-600 dark:bg-amber-950/40 dark:text-amber-400',
-      badge: 'SOVEREIGN ASSET',
-      badgeClass: 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400',
-      current: '₹1,50,000',
-      target: '₹2,00,000',
-      percent: 75,
-      percentText: '75% FUNDED',
-      remainingText: '₹50,000 remaining',
-      subInfo1: 'RBI Issue Window:',
-      subInfo2: 'Nov 20 - Nov 24',
-      subInfo2Alert: true,
-      buttonText: 'Lock In',
-      hasEditBtn: false,
-    },
-    {
-      id: 'g-5',
-      title: 'Angel Syndicate Allocation',
-      subtitle: 'Target: Jun 2024 • 8 months left',
-      icon: Rocket,
-      iconClass: 'bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-400',
-      badge: 'ALTERNATIVE ASSET',
-      badgeClass: 'bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400',
-      current: '₹50,000',
-      target: '₹1,00,000',
-      percent: 50,
-      percentText: '50% FUNDED',
-      remainingText: '₹50,000 remaining',
-      subInfo1: 'Deal Syndicate:',
-      subInfo2: 'Fintech Seed Pool',
-      renewalText: 'Capital Call Deadline:',
-      renewalVal: 'Jun 30, 2024',
-      buttonText: 'Allocate',
-      hasEditBtn: false,
-    },
-  ];
-
-  const handleOpenContribute = (card: typeof goalCards[0]) => {
-    const rawTarget = parseInt(card.target.replace(/[^0-9]/g, '')) * 100;
-    const rawSaved = parseInt(card.current.replace(/[^0-9]/g, '')) * 100;
-
-    setContributeGoal({
-      id: card.id,
-      name: card.title,
-      targetAmount: rawTarget,
-      savedAmount: rawSaved,
-      targetDate: '2024-03-31',
-    });
+  const getGoalIcon = (name: string) => {
+    const lower = name.toLowerCase();
+    if (lower.includes('goa') || lower.includes('travel') || lower.includes('vacation')) return Palmtree;
+    if (lower.includes('emergency') || lower.includes('shield')) return Shield;
+    if (lower.includes('macbook') || lower.includes('laptop') || lower.includes('tech')) return Laptop;
+    if (lower.includes('gold') || lower.includes('bond') || lower.includes('coin')) return Coins;
+    return Rocket;
   };
 
-  const handleOpenEdit = (card: typeof goalCards[0]) => {
-    const rawTarget = parseInt(card.target.replace(/[^0-9]/g, '')) * 100;
-    const rawSaved = parseInt(card.current.replace(/[^0-9]/g, '')) * 100;
+  // Dynamic Goal Cards derived from useFinanceStore.goals
+  const activeGoalCards = useMemo(() => {
+    return goals.map((g) => {
+      const percent = g.targetAmount > 0 ? Math.min(Math.round((g.savedAmount / g.targetAmount) * 100), 100) : 0;
+      const remainingPaise = Math.max(0, g.targetAmount - g.savedAmount);
+      const Icon = getGoalIcon(g.name);
 
-    setEditingGoal({
-      id: card.id,
-      name: card.title,
-      targetAmount: rawTarget,
-      savedAmount: rawSaved,
-      targetDate: '2024-03-31',
+      let iconClass = 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400';
+      let badgeClass = 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400';
+
+      const lower = g.name.toLowerCase();
+      if (lower.includes('goa') || lower.includes('gold')) {
+        iconClass = 'bg-amber-50 text-amber-600 dark:bg-amber-950/40 dark:text-amber-400';
+        badgeClass = 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400';
+      } else if (lower.includes('macbook') || lower.includes('laptop')) {
+        iconClass = 'bg-purple-50 text-purple-600 dark:bg-purple-950/40 dark:text-purple-400';
+        badgeClass = 'bg-purple-50 text-purple-700 dark:bg-purple-950/40 dark:text-purple-400';
+      } else if (lower.includes('angel') || lower.includes('syndicate')) {
+        iconClass = 'bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-400';
+        badgeClass = 'bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400';
+      }
+
+      return {
+        id: g.id,
+        rawGoal: g,
+        title: g.name,
+        subtitle: g.subtitle || `Target: ${g.targetDate}`,
+        icon: Icon,
+        iconClass,
+        badge: g.priority ? `${g.priority} PRIORITY` : 'ACTIVE GOAL',
+        badgeClass,
+        current: formatMoney(g.savedAmount, settings.currency),
+        target: formatMoney(g.targetAmount, settings.currency),
+        percent,
+        percentText: `${percent}% FUNDED`,
+        remainingText: `${formatMoney(remainingPaise, settings.currency)} remaining`,
+        subInfo1: 'Deduction Source:',
+        subInfo2: g.fundingMethod || 'Bank Auto-Debit',
+        paceBadge: g.paceStatusText || undefined,
+        buttonText: 'Contribute',
+        hasEditBtn: true,
+      };
     });
+  }, [goals, settings]);
+
+  const totalCapitalAllocated = useMemo(() => {
+    return goals.reduce((sum, g) => sum + g.savedAmount, 0);
+  }, [goals]);
+
+  const cumulativeTarget = useMemo(() => {
+    return goals.reduce((sum, g) => sum + g.targetAmount, 0);
+  }, [goals]);
+
+  const percentMet = cumulativeTarget > 0 ? ((totalCapitalAllocated / cumulativeTarget) * 100).toFixed(2) : '0';
+
+  const handleOpenContribute = (goal: Goal) => {
+    setContributeGoal(goal);
+  };
+
+  const handleOpenEdit = (goal: Goal) => {
+    setEditingGoal(goal);
     setIsModalOpen(true);
   };
 
@@ -240,7 +172,7 @@ export const GoalsPage: React.FC = () => {
         <div>
           <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
-            <span>Wealth Targets • Q4 2023 Review</span>
+            <span>Wealth Targets • Live Ledger</span>
           </div>
           <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
             Savings Goals
@@ -285,16 +217,16 @@ export const GoalsPage: React.FC = () => {
             </div>
           </div>
           <div className="mt-2 text-2xl font-bold text-slate-900 dark:text-slate-100 tabular-nums">
-            ₹3,45,000<span className="text-sm text-slate-400 font-semibold">.00</span>
+            {formatMoney(totalCapitalAllocated, settings.currency)}
           </div>
           <div className="mt-2 text-xs flex items-center justify-between">
             <span className="text-emerald-700 dark:text-emerald-400 font-semibold text-[11px]">
-              ↗ +18.4% across 5 active portfolio reserves
+              ↗ Active across {goals.length} portfolio reserves
             </span>
           </div>
           <div className="mt-1 pt-2 border-t border-slate-100 dark:border-slate-800 text-[11px] text-slate-400 flex justify-between font-medium">
-            <span>Cumulative Target: ₹12,75,000</span>
-            <span className="text-emerald-600 font-bold">27.05% Met</span>
+            <span>Cumulative Target: {formatMoney(cumulativeTarget, settings.currency)}</span>
+            <span className="text-emerald-600 font-bold">{percentMet}% Met</span>
           </div>
         </Card>
 
@@ -318,7 +250,7 @@ export const GoalsPage: React.FC = () => {
             <span className="text-slate-400 text-[11px]">Next deduction Nov 01 (in 6 days)</span>
           </div>
           <div className="mt-1 pt-2 border-t border-slate-100 dark:border-slate-800 text-[11px] text-slate-400 flex justify-between font-medium">
-            <span>Primary Source: HDFC Salary A/c</span>
+            <span>Primary Source: Linked Salary A/c</span>
             <span className="text-emerald-600 font-bold">100% On Schedule</span>
           </div>
         </Card>
@@ -353,7 +285,7 @@ export const GoalsPage: React.FC = () => {
 
       {/* Goals Grid (3 Cols) */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {goalCards.map((g) => {
+        {activeGoalCards.map((g) => {
           const Icon = g.icon;
           const isMenuOpen = activeMenuId === g.id;
 
@@ -394,7 +326,7 @@ export const GoalsPage: React.FC = () => {
                         <button
                           onClick={() => {
                             setActiveMenuId(null);
-                            handleOpenContribute(g);
+                            handleOpenContribute(g.rawGoal);
                           }}
                           className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200"
                         >
@@ -403,11 +335,20 @@ export const GoalsPage: React.FC = () => {
                         <button
                           onClick={() => {
                             setActiveMenuId(null);
-                            handleOpenEdit(g);
+                            handleOpenEdit(g.rawGoal);
                           }}
                           className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200"
                         >
                           Edit Target
+                        </button>
+                        <button
+                          onClick={() => {
+                            setActiveMenuId(null);
+                            deleteGoal(g.id);
+                          }}
+                          className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/40 text-rose-600 dark:text-rose-400"
+                        >
+                          Delete Goal
                         </button>
                       </div>
                     )}
@@ -454,29 +395,13 @@ export const GoalsPage: React.FC = () => {
                 <div className="py-2 border-t border-slate-100 dark:border-slate-800 text-xs space-y-1">
                   <div className="flex justify-between text-[11px]">
                     <span className="text-slate-400">{g.subInfo1}</span>
-                    <span className={`font-semibold ${g.subInfo2Alert ? 'text-rose-600' : 'text-slate-600 dark:text-slate-300'}`}>
+                    <span className="font-semibold text-slate-600 dark:text-slate-300">
                       {g.subInfo2}
                     </span>
                   </div>
-                  {g.sipText && (
-                    <div className="flex justify-between text-[11px] pt-1">
-                      <span className="text-slate-400">{g.sipText}</span>
-                      <span className="font-bold text-slate-800 dark:text-slate-200 tabular-nums">
-                        {g.sipVal}
-                      </span>
-                    </div>
-                  )}
                   {g.paceBadge && (
                     <div className="text-[11px] font-semibold text-emerald-600 pt-1">
                       {g.paceBadge}
-                    </div>
-                  )}
-                  {g.renewalText && (
-                    <div className="flex justify-between text-[11px] pt-1">
-                      <span className="text-slate-400">{g.renewalText}</span>
-                      <span className="font-bold text-slate-800 dark:text-slate-200">
-                        {g.renewalVal}
-                      </span>
                     </div>
                   )}
                 </div>
@@ -485,14 +410,14 @@ export const GoalsPage: React.FC = () => {
               {/* Action Buttons */}
               <div className="flex items-center gap-2 pt-2">
                 <button
-                  onClick={() => handleOpenContribute(g)}
+                  onClick={() => handleOpenContribute(g.rawGoal)}
                   className="flex-1 py-1.5 text-xs font-semibold rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100 transition-colors"
                 >
                   {g.buttonText}
                 </button>
                 {g.hasEditBtn && (
                   <button
-                    onClick={() => handleOpenEdit(g)}
+                    onClick={() => handleOpenEdit(g.rawGoal)}
                     className="px-3 py-1.5 text-xs font-semibold text-slate-500 hover:text-slate-800 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800"
                   >
                     Edit Goal
@@ -503,7 +428,7 @@ export const GoalsPage: React.FC = () => {
           );
         })}
 
-        {/* 6th Card: Create Custom Goal */}
+        {/* Create Custom Goal Card */}
         <Card
           onClick={() => {
             setEditingGoal(null);
@@ -557,20 +482,26 @@ export const GoalsPage: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-              {mandates.map((m) => (
+              {currentMandates.map((m) => (
                 <tr key={m.id} className="hover:bg-slate-50/50 transition-colors">
                   <td className="p-3 font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
-                    <span>{m.name}</span>
+                    <span>{m.goalName}</span>
                   </td>
-                  <td className="p-3 text-slate-600 dark:text-slate-300">{m.type}</td>
-                  <td className="p-3 text-slate-600 dark:text-slate-300">{m.date}</td>
+                  <td className="p-3 text-slate-600 dark:text-slate-300">{m.mandateType}</td>
+                  <td className="p-3 text-slate-600 dark:text-slate-300">{m.cycleDate}</td>
                   <td className="p-3 font-bold text-slate-900 dark:text-slate-100 tabular-nums">
-                    {m.allocation}
+                    {formatMoney(m.monthlyAllocation, settings.currency)}
                   </td>
-                  <td className="p-3 text-slate-600 dark:text-slate-300">{m.completion}</td>
+                  <td className="p-3 text-slate-600 dark:text-slate-300">{m.estCompletion}</td>
                   <td className="p-3 text-right">
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${m.statusClass}`}>
+                    <span
+                      className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                        m.status === 'Active'
+                          ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400'
+                          : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
+                      }`}
+                    >
                       {m.status}
                     </span>
                   </td>
@@ -648,7 +579,10 @@ export const GoalsPage: React.FC = () => {
 
       <GoalModal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        onClose={() => {
+          setIsModalOpen(false);
+          setEditingGoal(null);
+        }}
         editGoal={editingGoal}
       />
 

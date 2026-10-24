@@ -1,6 +1,8 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Card } from '../ui/Card';
+import { useFinanceStore } from '../../store/useFinanceStore';
+import { formatMoney } from '../../lib/currency';
 import {
   Utensils,
   Briefcase,
@@ -9,77 +11,68 @@ import {
   Activity,
   Zap,
   ArrowRight,
+  TrendingUp,
+  Tv,
+  Coffee,
+  Tag,
+  ArrowRightLeft,
+  Receipt,
 } from 'lucide-react';
 
 export const RecentTransactions: React.FC = () => {
-  const transactions = [
-    {
-      id: 'tx-1',
-      title: 'Swiggy Gourmet',
-      category: 'Food & Dining',
-      catColor: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
-      accountInfo: '24 Oct, 08:15 PM • ICICI Debit ..8921',
-      amount: '-₹1,420.00',
-      isIncome: false,
-      icon: Utensils,
-      iconBg: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300',
-    },
-    {
-      id: 'tx-2',
-      title: 'Tech Mahindra Salary',
-      category: 'Income',
-      catColor: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400',
-      accountInfo: '23 Oct, 10:00 AM • ICICI Salary A/c',
-      amount: '+₹1,45,000.00',
-      isIncome: true,
-      icon: Briefcase,
-      iconBg: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400',
-    },
-    {
-      id: 'tx-3',
-      title: 'Amazon India',
-      category: 'Shopping',
-      catColor: 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-400',
-      accountInfo: '22 Oct, 04:30 PM • HDFC Card ..4092',
-      amount: '-₹3,499.00',
-      isIncome: false,
-      icon: ShoppingBag,
-      iconBg: 'bg-indigo-50 text-indigo-600 dark:bg-indigo-950/40 dark:text-indigo-400',
-    },
-    {
-      id: 'tx-4',
-      title: 'Shell Petrol BKC',
-      category: 'Transport',
-      catColor: 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-400',
-      accountInfo: '22 Oct, 09:15 AM • HDFC Card ..4092',
-      amount: '-₹2,500.00',
-      isIncome: false,
-      icon: Car,
-      iconBg: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300',
-    },
-    {
-      id: 'tx-5',
-      title: 'Cult.fit Pass',
-      category: 'Health',
-      catColor: 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-400',
-      accountInfo: '20 Oct, 07:00 PM • UPI (Paytm)',
-      amount: '-₹2,100.00',
-      isIncome: false,
-      icon: Activity,
-      iconBg: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300',
-    },
-    {
-      id: 'tx-6',
-      title: 'Tata Power Electricity',
-      category: 'Bills',
-      catColor: 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-400',
-      accountInfo: '18 Oct, 11:30 AM • AutoPay',
-      amount: '-₹1,850.00',
-      isIncome: false,
-      icon: Zap,
-      iconBg: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300',
-    },
-  ];
+  const { transactions, accounts, categories, settings } = useFinanceStore();
+
+  const getCategoryDetails = (catId?: string) => {
+    const cat = categories.find((c) => c.id === catId);
+    if (!cat) {
+      return {
+        name: 'General',
+        icon: Tag,
+        colorClass: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
+        iconBg: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300',
+      };
+    }
+
+    const lower = cat.name.toLowerCase();
+    let Icon = Tag;
+    let iconBg = 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300';
+
+    if (lower.includes('food') || lower.includes('dining')) {
+      Icon = Utensils;
+    } else if (lower.includes('salary') || lower.includes('income')) {
+      Icon = Briefcase;
+      iconBg = 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400';
+    } else if (lower.includes('shopping')) {
+      Icon = ShoppingBag;
+      iconBg = 'bg-indigo-50 text-indigo-600 dark:bg-indigo-950/40 dark:text-indigo-400';
+    } else if (lower.includes('transport') || lower.includes('commute')) {
+      Icon = Car;
+    } else if (lower.includes('health') || lower.includes('fit')) {
+      Icon = Activity;
+    } else if (lower.includes('bill') || lower.includes('util') || lower.includes('power')) {
+      Icon = Zap;
+    } else if (lower.includes('entertainment') || lower.includes('ott')) {
+      Icon = Tv;
+    } else if (lower.includes('invest')) {
+      Icon = TrendingUp;
+    }
+
+    let colorClass = 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-400';
+    if (cat.type === 'income') {
+      colorClass = 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400';
+    } else if (lower.includes('food')) {
+      colorClass = 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300';
+    }
+
+    return { name: cat.name, icon: Icon, colorClass, iconBg };
+  };
+
+  const getAccountName = (accId?: string) => {
+    const acc = accounts.find((a) => a.id === accId);
+    return acc ? acc.name : 'Linked Account';
+  };
+
+  const displayList = transactions.slice(0, 6);
 
   return (
     <Card className="p-6 rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs">
@@ -100,47 +93,71 @@ export const RecentTransactions: React.FC = () => {
         </Link>
       </div>
 
-      <div className="divide-y divide-slate-100 dark:divide-slate-800 mt-2">
-        {transactions.map((tx) => {
-          const Icon = tx.icon;
-          return (
-            <Link
-              key={tx.id}
-              to="/transactions"
-              className="py-3 flex items-center justify-between hover:bg-slate-50/50 dark:hover:bg-slate-800/40 px-2 rounded-xl transition-colors cursor-pointer group"
-            >
-              <div className="flex items-center gap-3 min-w-0">
-                <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${tx.iconBg}`}>
-                  <Icon className="w-4 h-4" />
-                </div>
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100 truncate group-hover:text-emerald-700 dark:group-hover:text-emerald-400 transition-colors">
-                      {tx.title}
-                    </h4>
-                    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${tx.catColor}`}>
-                      {tx.category}
-                    </span>
-                  </div>
-                  <p className="text-xs text-slate-400 mt-0.5 truncate">
-                    {tx.accountInfo}
-                  </p>
-                </div>
-              </div>
+      {displayList.length === 0 ? (
+        <div className="text-center py-8">
+          <Receipt className="w-10 h-10 text-slate-300 dark:text-slate-600 mx-auto mb-2" />
+          <p className="text-xs font-semibold text-slate-500">No transactions recorded yet.</p>
+        </div>
+      ) : (
+        <div className="divide-y divide-slate-100 dark:divide-slate-800 mt-2">
+          {displayList.map((tx) => {
+            const isIncome = tx.type === 'income';
+            const isTransfer = tx.type === 'transfer';
+            const cat = isTransfer
+              ? {
+                  name: 'Transfer',
+                  icon: ArrowRightLeft,
+                  colorClass: 'bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400',
+                  iconBg: 'bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-400',
+                }
+              : getCategoryDetails(tx.categoryId);
+            const Icon = cat.icon;
+            const accountLabel = getAccountName(tx.accountId);
+            const dateLabel = tx.date ? new Date(tx.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : '';
+            const subtext = `${dateLabel}${tx.time ? `, ${tx.time}` : ''} • ${accountLabel}`;
 
-              <span
-                className={`text-sm font-bold tabular-nums shrink-0 ${
-                  tx.isIncome
-                    ? 'text-emerald-700 dark:text-emerald-400'
-                    : 'text-rose-600 dark:text-rose-400'
-                }`}
+            return (
+              <Link
+                key={tx.id}
+                to="/transactions"
+                className="py-3 flex items-center justify-between hover:bg-slate-50/50 dark:hover:bg-slate-800/40 px-2 rounded-xl transition-colors cursor-pointer group"
               >
-                {tx.amount}
-              </span>
-            </Link>
-          );
-        })}
-      </div>
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${cat.iconBg}`}>
+                    <Icon className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100 truncate group-hover:text-emerald-700 dark:group-hover:text-emerald-400 transition-colors">
+                        {tx.note || 'Transaction'}
+                      </h4>
+                      <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${cat.colorClass}`}>
+                        {cat.name}
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-400 mt-0.5 truncate">
+                      {subtext}
+                    </p>
+                  </div>
+                </div>
+
+                <span
+                  className={`text-sm font-bold tabular-nums shrink-0 ${
+                    isIncome
+                      ? 'text-emerald-700 dark:text-emerald-400'
+                      : isTransfer
+                      ? 'text-blue-600 dark:text-blue-400'
+                      : 'text-rose-600 dark:text-rose-400'
+                  }`}
+                >
+                  {isIncome ? '+' : isTransfer ? '' : '-'}
+                  {formatMoney(tx.amount, settings.currency)}
+                </span>
+              </Link>
+            );
+          })}
+        </div>
+      )}
     </Card>
   );
 };

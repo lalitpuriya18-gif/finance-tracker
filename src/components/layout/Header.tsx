@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Calendar, Bell, Plus, Menu, X, CheckCircle2, LogOut, User, Sparkles, Clock, AlertTriangle, ArrowRight } from 'lucide-react';
 import { useFinanceStore } from '../../store/useFinanceStore';
+import { api } from '../../lib/api';
 import { Link } from 'react-router-dom';
 
 interface HeaderProps {
@@ -50,6 +51,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenAddTransaction, onToggleSi
       setIsGoogleModalOpen(true);
     } else {
       setIsSignedIn(true);
+      api.googleAuth(settings.userName, settings.userEmail).catch((e) => console.warn(e));
       addToast({
         title: 'Signed in with Google',
         description: `Welcome back, ${settings.userName}!`,
@@ -62,6 +64,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenAddTransaction, onToggleSi
   const handleSignOut = () => {
     setIsSignedIn(false);
     setIsGoogleModalOpen(false);
+    api.logout().catch((e) => console.warn(e));
     addToast({
       title: 'Signed Out',
       description: 'You have been signed out of Google account.',
@@ -72,6 +75,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenAddTransaction, onToggleSi
   const handleMarkAllRead = () => {
     setNotifications((prev) => prev.map((n) => ({ ...n, isUnread: false })));
     setUnreadCount(0);
+    api.markAllNotificationsRead().catch((e) => console.warn(e));
     addToast({
       title: 'Notifications Cleared',
       description: 'All notifications marked as read.',

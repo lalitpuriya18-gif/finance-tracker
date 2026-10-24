@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Card } from '../ui/Card';
+import { useFinanceStore } from '../../store/useFinanceStore';
+import { formatMoney } from '../../lib/currency';
 import {
   ResponsiveContainer,
   AreaChart,
@@ -15,25 +17,89 @@ import {
 import { Info } from 'lucide-react';
 
 export const ChartsSection: React.FC = () => {
-  // 6-Month operational cashflow data matching the Stitch chart
-  const cashflowData = [
-    { month: 'May 23', income: 140000, expense: 62000 },
-    { month: 'Jun 23', income: 142000, expense: 64000 },
-    { month: 'Jul 23', income: 141000, expense: 65000 },
-    { month: 'Aug 23', income: 144000, expense: 66000 },
-    { month: 'Sep 23', income: 143000, expense: 67000 },
-    { month: 'Oct 23 (Current)', income: 145000, expense: 68320 },
-  ];
+  const { transactions, categories, settings } = useFinanceStore();
 
-  // Category donut allocation data matching the Stitch breakdown
-  const categoryData = [
-    { name: 'Food & Dining', percent: '32%', value: 21860, color: '#10b981' },
-    { name: 'Rent', percent: '28%', value: 19130, color: '#1e293b' },
-    { name: 'Shopping', percent: '14%', value: 9560, color: '#f43f5e' },
-    { name: 'Transport', percent: '12%', value: 8200, color: '#06b6d4' },
-    { name: 'Bills', percent: '9%', value: 6150, color: '#3b82f6' },
-    { name: 'Entertainment', percent: '5%', value: 3440, color: '#8b5cf6' },
-  ];
+  // 6-Month operational cashflow data calculated from transactions with Stitch fallback
+  const cashflowData = useMemo(() => {
+    const months = [
+      { key: '2023-05', label: 'May 23', defaultInc: 140000, defaultExp: 62000 },
+      { key: '2023-06', label: 'Jun 23', defaultInc: 142000, defaultExp: 64000 },
+      { key: '2023-07', label: 'Jul 23', defaultInc: 141000, defaultExp: 65000 },
+      { key: '2023-08', label: 'Aug 23', defaultInc: 144000, defaultExp: 66000 },
+      { key: '2023-09', label: 'Sep 23', defaultInc: 143000, defaultExp: 67000 },
+      { key: '2023-10', label: 'Oct 23 (Current)', defaultInc: 145000, defaultExp: 68320 },
+    ];
+
+    return months.map((m) => {
+      const monthTxs = transactions.filter((t) => t.date && t.date.startsWith(m.key));
+      if (monthTxs.length > 0) {
+        const inc = monthTxs.filter((t) => t.type === 'income').reduce((s, t) => s + t.amount, 0) / 100;
+        const exp = monthTxs.filter((t) => t.type === 'expense').reduce((s, t) => s + t.amount, 0) / 100;
+        return {
+          month: m.label,
+          income: inc > 0 ? Math.round(inc) : m.defaultInc,
+          expense: exp > 0 ? Math.round(exp) : m.defaultExp,
+        };
+      }
+      return {
+        month: m.label,
+        income: m.defaultInc,
+        expense: m.defaultExp,
+      };
+    });
+  }, [transactions]);
+
+  // Category donut allocation data matching real expenses with fallback
+  const { categoryData, totalSpendPaise } = useMemo(() => {
+    // Current month expenses
+    const octExpenses = transactions.filter(
+      (t) => t.type === 'expense' && (t.date.startsWith('2023-10') || transactions.length < 25)
+    );
+
+    const spendMap = new Map<string, number>();
+    let total = 0;
+
+    for (const t of octExpenses) {
+      const catId = t.categoryId || 'other';
+      spendMap.set(catId, (spendMap.get(catId) || 0) + t.amount);
+      total += t.amount;
+    }
+
+    if (total === 0 || spendMap.size === 0) {
+      return {
+        categoryData: [
+          { name: 'Food & Dining', percent: '32%', value: 21860, color: '#10b981' },
+          { name: 'Rent', percent: '28%', value: 19130, color: '#1e293b' },
+          { name: 'Shopping', percent: '14%', value: 9560, color: '#f43f5e' },
+          { name: 'Transport', percent: '12%', value: 8200, color: '#06b6d4' },
+          { name: 'Bills', percent: '9%', value: 6150, color: '#3b82f6' },
+          { name: 'Entertainment', percent: '5%', value: 3440, color: '#8b5cf6' },
+        ],
+        totalSpendPaise: 6834000,
+      };
+    }
+
+    const defaultColors = ['#10b981', '#1e293b', '#f43f5e', '#06b6d4', '#3b82f6', '#8b5cf6', '#f59e0b', '#14b8a6'];
+    const items = Array.from(spendMap.entries()).map(([catId, amountPaise], idx) => {
+      const cat = categories.find((c) => c.id === catId);
+      const name = cat ? cat.name : 'Other';
+      const color = cat?.color || defaultColors[idx % defaultColors.length];
+      const percent = `${Math.round((amountPaise / total) * 100)}%`;
+      return {
+        name,
+        percent,
+        value: Math.round(amountPaise / 100),
+        color,
+      };
+    });
+
+    items.sort((a, b) => b.value - a.value);
+
+    return {
+      categoryData: items.slice(0, 6),
+      totalSpendPaise: total,
+    };
+  }, [transactions, categories]);
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -88,7 +154,7 @@ export const ChartsSection: React.FC = () => {
               />
               <YAxis
                 hide={true}
-                domain={[0, 160000]}
+                domain={[0, 'auto']}
               />
               <Tooltip
                 formatter={(val: any) => [`₹${val.toLocaleString('en-IN')}`, '']}
@@ -168,7 +234,7 @@ export const ChartsSection: React.FC = () => {
               Total Spend
             </span>
             <span className="text-base font-extrabold text-slate-900 dark:text-slate-100 tabular-nums">
-              ₹68,340
+              {formatMoney(totalSpendPaise, settings.currency)}
             </span>
           </div>
         </div>

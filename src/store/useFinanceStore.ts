@@ -12,6 +12,7 @@ import {
   ThemeMode,
 } from '../types/finance';
 import { storage } from '../lib/storage';
+import { api } from '../lib/api';
 import { getSeedData } from '../lib/seedData';
 
 interface FinanceState extends FinanceData {
@@ -67,6 +68,9 @@ interface FinanceState extends FinanceData {
   updateGoal: (id: string, updates: Partial<Goal>) => void;
   deleteGoal: (id: string) => void;
   contributeToGoal: (goalId: string, amount: number, fromAccountId?: string) => void;
+
+  // Mandates
+  toggleMandate: (id: string) => void;
 
   // Recurring Rules
   addRecurringRule: (rule: Omit<RecurringRule, 'id'>) => void;
@@ -183,6 +187,7 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
       transactions: [newTx, ...state.transactions],
     }));
     get().saveToStorage();
+    api.addTransaction(newTx).catch((e) => console.warn('[API] Failed to sync new transaction:', e));
     get().addToast({
       title: 'Transaction Recorded',
       description: `${txData.type === 'income' ? 'Income' : txData.type === 'expense' ? 'Expense' : 'Transfer'} of ${txData.note || 'entry'} added.`,
@@ -195,6 +200,7 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
       transactions: state.transactions.map((t) => (t.id === id ? { ...t, ...updates } : t)),
     }));
     get().saveToStorage();
+    api.updateTransaction(id, updates).catch((e) => console.warn('[API] Failed to sync update transaction:', e));
     get().addToast({
       title: 'Transaction Updated',
       type: 'info',
@@ -209,6 +215,7 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
       transactions: state.transactions.filter((t) => t.id !== id),
     }));
     get().saveToStorage();
+    api.deleteTransaction(id).catch((e) => console.warn('[API] Failed to sync delete transaction:', e));
 
     // Undo toast with action
     get().addToast({
@@ -221,6 +228,7 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
           transactions: [target, ...state.transactions],
         }));
         get().saveToStorage();
+        api.addTransaction(target).catch((e) => console.warn('[API] Failed to sync restore transaction:', e));
         get().addToast({
           title: 'Transaction Restored',
           type: 'success',
@@ -236,6 +244,7 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
       transactions: state.transactions.filter((t) => !setIds.has(t.id)),
     }));
     get().saveToStorage();
+    api.bulkDeleteTransactions(ids).catch((e) => console.warn('[API] Failed to sync bulk delete:', e));
 
     get().addToast({
       title: `${ids.length} Transactions Deleted`,
@@ -246,6 +255,7 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
           transactions: [...deleted, ...state.transactions],
         }));
         get().saveToStorage();
+        api.importTransactions(deleted).catch((e) => console.warn('[API] Failed to sync restore bulk:', e));
       },
     });
   },
@@ -255,6 +265,7 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
       transactions: [...newTxs, ...state.transactions],
     }));
     get().saveToStorage();
+    api.importTransactions(newTxs).catch((e) => console.warn('[API] Failed to sync imported transactions:', e));
     get().addToast({
       title: 'Transactions Imported',
       description: `Successfully added ${newTxs.length} records.`,
@@ -271,6 +282,7 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
       accounts: [...state.accounts, newAcc],
     }));
     get().saveToStorage();
+    api.addAccount(newAcc).catch((e) => console.warn('[API] Failed to sync account:', e));
     get().addToast({
       title: 'Account Created',
       description: `${accData.name} is ready.`,
@@ -283,6 +295,7 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
       accounts: state.accounts.map((a) => (a.id === id ? { ...a, ...updates } : a)),
     }));
     get().saveToStorage();
+    api.updateAccount(id, updates).catch((e) => console.warn('[API] Failed to sync update account:', e));
     get().addToast({ title: 'Account Updated', type: 'info' });
   },
 
@@ -291,6 +304,7 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
       accounts: state.accounts.filter((a) => a.id !== id),
     }));
     get().saveToStorage();
+    api.deleteAccount(id).catch((e) => console.warn('[API] Failed to sync delete account:', e));
     get().addToast({ title: 'Account Removed', type: 'warning' });
   },
 
@@ -311,6 +325,9 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
       transactions: [tx, ...state.transactions],
     }));
     get().saveToStorage();
+    api.transferBetweenAccounts(fromAccountId, toAccountId, amount, note, date).catch((e) =>
+      console.warn('[API] Failed to sync transfer:', e)
+    );
     get().addToast({
       title: 'Transfer Completed',
       description: note || 'Funds transferred successfully.',
@@ -327,6 +344,7 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
       categories: [...state.categories, newCat],
     }));
     get().saveToStorage();
+    api.addCategory(newCat).catch((e) => console.warn('[API] Failed to sync category:', e));
     get().addToast({ title: 'Category Created', type: 'success' });
   },
 
@@ -335,6 +353,7 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
       categories: state.categories.map((c) => (c.id === id ? { ...c, ...updates } : c)),
     }));
     get().saveToStorage();
+    api.updateCategory(id, updates).catch((e) => console.warn('[API] Failed to sync category update:', e));
     get().addToast({ title: 'Category Updated', type: 'info' });
   },
 
@@ -344,6 +363,7 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
       budgets: state.budgets.filter((b) => b.categoryId !== id),
     }));
     get().saveToStorage();
+    api.deleteCategory(id).catch((e) => console.warn('[API] Failed to sync category deletion:', e));
     get().addToast({ title: 'Category Deleted', type: 'warning' });
   },
 
@@ -368,6 +388,7 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
       }
     });
     get().saveToStorage();
+    api.setCategoryBudget(categoryId, monthlyLimit).catch((e) => console.warn('[API] Failed to sync budget:', e));
     get().addToast({ title: 'Budget Limit Saved', type: 'success' });
   },
 
@@ -376,6 +397,7 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
       budgets: state.budgets.filter((b) => b.id !== id),
     }));
     get().saveToStorage();
+    api.deleteBudget(id).catch((e) => console.warn('[API] Failed to sync budget deletion:', e));
     get().addToast({ title: 'Budget Removed', type: 'info' });
   },
 
@@ -389,6 +411,7 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
       goals: [...state.goals, newGoal],
     }));
     get().saveToStorage();
+    api.addGoal(newGoal).catch((e) => console.warn('[API] Failed to sync goal creation:', e));
     get().addToast({ title: 'Savings Goal Created', type: 'success' });
   },
 
@@ -397,6 +420,7 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
       goals: state.goals.map((g) => (g.id === id ? { ...g, ...updates } : g)),
     }));
     get().saveToStorage();
+    api.updateGoal(id, updates).catch((e) => console.warn('[API] Failed to sync goal update:', e));
     get().addToast({ title: 'Goal Updated', type: 'info' });
   },
 
@@ -405,6 +429,7 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
       goals: state.goals.filter((g) => g.id !== id),
     }));
     get().saveToStorage();
+    api.deleteGoal(id).catch((e) => console.warn('[API] Failed to sync goal deletion:', e));
     get().addToast({ title: 'Goal Removed', type: 'warning' });
   },
 
@@ -416,7 +441,6 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
     }));
 
     if (fromAccountId) {
-      // Also register a transfer or expense
       const goal = get().goals.find((g) => g.id === goalId);
       const tx: Transaction = {
         id: `tx-goal-${Date.now()}`,
@@ -434,11 +458,24 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
     }
 
     get().saveToStorage();
+    api.contributeToGoal(goalId, amount, fromAccountId).catch((e) =>
+      console.warn('[API] Failed to sync goal contribution:', e)
+    );
     get().addToast({
       title: 'Contribution Added',
       description: 'Progress updated towards your goal.',
       type: 'success',
     });
+  },
+
+  toggleMandate: (id) => {
+    set((state) => ({
+      mandates: (state.mandates || []).map((m) =>
+        m.id === id ? { ...m, status: m.status === 'Active' ? 'Paused' : 'Active' } : m
+      ),
+    }));
+    get().saveToStorage();
+    api.toggleMandate(id).catch((e) => console.warn('[API] Failed to sync mandate toggle:', e));
   },
 
   addRecurringRule: (ruleData) => {
@@ -474,6 +511,7 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
       settings: { ...state.settings, ...updates },
     }));
     get().saveToStorage();
+    api.updateSettings(updates).catch((e) => console.warn('[API] Failed to sync settings:', e));
     if (updates.theme) {
       get().setTheme(updates.theme);
     }
@@ -534,6 +572,11 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
     }),
 
   clearDemoData: async () => {
+    try {
+      await api.clearAllData();
+    } catch (e) {
+      console.warn('[API] Failed to clear remote data:', e);
+    }
     await storage.clearData();
     set({
       transactions: [],
@@ -551,11 +594,21 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
   },
 
   resetToDemoData: async () => {
-    const seed = getSeedData();
-    await storage.saveData(seed);
-    set({
-      ...seed,
-    });
+    try {
+      const res = await api.resetDemoData();
+      if (res && res.data) {
+        set({ ...res.data });
+        await storage.saveData(res.data);
+      } else {
+        const seed = getSeedData();
+        await storage.saveData(seed);
+        set({ ...seed });
+      }
+    } catch {
+      const seed = getSeedData();
+      await storage.saveData(seed);
+      set({ ...seed });
+    }
     get().addToast({
       title: 'Demo Data Restored',
       description: 'Sample fintech dataset re-seeded successfully.',
