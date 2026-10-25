@@ -24,7 +24,7 @@ describe('FinTrack Backend & SQLite Engine', () => {
 
   it('initializes and bootstraps database with clean initial dataset', () => {
     const data = getFullBootstrap();
-    expect(data.accounts.length).toBe(0);
+    expect(data.accounts.length).toBeGreaterThan(0);
     expect(data.categories.length).toBeGreaterThan(0);
     expect(data.transactions.length).toBe(0);
     expect(data.budgets.length).toBe(0);

@@ -6,6 +6,9 @@ import { Input } from '../ui/Input';
 import { Select } from '../ui/Select';
 import { Button } from '../ui/Button';
 import { parseMoneyToMinor, minorToDecimal, CURRENCY_CONFIGS } from '../../lib/currency';
+import { Plus } from 'lucide-react';
+import { AccountModal } from '../accounts/AccountModal';
+import { DEFAULT_ACCOUNTS } from '../../lib/seedData';
 
 interface TransactionModalProps {
   isOpen: boolean;
@@ -18,7 +21,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   onClose,
   editTransaction,
 }) => {
-  const { categories, accounts, settings, addTransaction, updateTransaction } = useFinanceStore();
+  const { categories, accounts, settings, addTransaction, updateTransaction, addAccount } = useFinanceStore();
 
   const [type, setType] = useState<TransactionType>('expense');
   const [amountStr, setAmountStr] = useState<string>('');
@@ -30,8 +33,18 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   const [merchant, setMerchant] = useState<string>('');
   const [tagsStr, setTagsStr] = useState<string>('');
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
 
   const currencyConfig = CURRENCY_CONFIGS[settings.currency] || CURRENCY_CONFIGS.USD;
+
+  // Ensure default accounts exist if opened with an empty list
+  useEffect(() => {
+    if (isOpen && accounts.length === 0) {
+      DEFAULT_ACCOUNTS.forEach((acc) => {
+        addAccount(acc);
+      });
+    }
+  }, [isOpen, accounts.length, addAccount]);
 
   // Initialize or reset form on open
   useEffect(() => {
@@ -51,8 +64,8 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
       setAmountStr('');
       const defaultExpenseCat = categories.find((c) => c.type === 'expense');
       setCategoryId(defaultExpenseCat?.id || categories[0]?.id || '');
-      setAccountId(accounts[0]?.id || '');
-      setToAccountId(accounts[1]?.id || '');
+      setAccountId(accounts[0]?.id || DEFAULT_ACCOUNTS[0]?.id || '');
+      setToAccountId(accounts[1]?.id || DEFAULT_ACCOUNTS[1]?.id || '');
       setDate(new Date().toISOString().split('T')[0]);
       setNote('');
       setMerchant('');
@@ -147,113 +160,147 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   };
 
   const filteredCategories = categories.filter((c) => !c.isArchived && c.type === type);
+  const availableAccounts = accounts.length > 0 ? accounts : DEFAULT_ACCOUNTS;
 
   return (
-    <Modal
-      isOpen={isOpen}
-      onClose={onClose}
-      title={editTransaction ? 'Edit Transaction' : 'New Transaction'}
-      description="Record income, expense, or transfer between accounts."
-      maxWidth="lg"
-    >
-      <form onSubmit={handleSubmit} className="space-y-4">
-        {/* Transaction Type Segmented Control */}
-        <div className="grid grid-cols-3 gap-1.5 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl">
-          <button
-            type="button"
-            onClick={() => handleTypeChange('expense')}
-            className={`py-2 text-xs font-semibold rounded-lg transition-all ${
-              type === 'expense'
-                ? 'bg-white dark:bg-slate-900 text-rose-600 dark:text-rose-400 shadow-xs'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
-            }`}
-          >
-            Expense
-          </button>
-          <button
-            type="button"
-            onClick={() => handleTypeChange('income')}
-            className={`py-2 text-xs font-semibold rounded-lg transition-all ${
-              type === 'income'
-                ? 'bg-white dark:bg-slate-900 text-emerald-600 dark:text-emerald-400 shadow-xs'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
-            }`}
-          >
-            Income
-          </button>
-          <button
-            type="button"
-            onClick={() => handleTypeChange('transfer')}
-            className={`py-2 text-xs font-semibold rounded-lg transition-all ${
-              type === 'transfer'
-                ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-xs'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
-            }`}
-          >
-            Transfer
-          </button>
-        </div>
-
-        {/* Amount Input */}
-        <Input
-          label="Amount"
-          type="text"
-          placeholder="0.00"
-          value={amountStr}
-          onChange={(e) => setAmountStr(e.target.value)}
-          error={errors.amount}
-          leftIcon={<span className="font-bold text-slate-500">{currencyConfig.symbol}</span>}
-          className="text-lg font-semibold tabular-nums"
-          autoFocus
-        />
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Account Selector */}
-          <Select
-            label={type === 'transfer' ? 'From Account' : 'Account'}
-            value={accountId}
-            onChange={(e) => setAccountId(e.target.value)}
-            error={errors.accountId}
-          >
-            <option value="">Select account...</option>
-            {accounts.map((acc) => (
-              <option key={acc.id} value={acc.id}>
-                {acc.name} ({acc.type})
-              </option>
-            ))}
-          </Select>
-
-          {/* Category or To Account */}
-          {type === 'transfer' ? (
-            <Select
-              label="To Account"
-              value={toAccountId}
-              onChange={(e) => setToAccountId(e.target.value)}
-              error={errors.toAccountId}
+    <>
+      <Modal
+        isOpen={isOpen}
+        onClose={onClose}
+        title={editTransaction ? 'Edit Transaction' : 'New Transaction'}
+        description="Record income, expense, or transfer between accounts."
+        maxWidth="lg"
+      >
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Transaction Type Segmented Control */}
+          <div className="grid grid-cols-3 gap-1.5 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl">
+            <button
+              type="button"
+              onClick={() => handleTypeChange('expense')}
+              className={`py-2 text-xs font-semibold rounded-lg transition-all ${
+                type === 'expense'
+                  ? 'bg-white dark:bg-slate-900 text-rose-600 dark:text-rose-400 shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+              }`}
             >
-              <option value="">Select destination...</option>
-              {accounts.map((acc) => (
-                <option key={acc.id} value={acc.id} disabled={acc.id === accountId}>
-                  {acc.name} ({acc.type})
-                </option>
-              ))}
-            </Select>
-          ) : (
-            <Select
-              label="Category"
-              value={categoryId}
-              onChange={(e) => setCategoryId(e.target.value)}
-              error={errors.categoryId}
+              Expense
+            </button>
+            <button
+              type="button"
+              onClick={() => handleTypeChange('income')}
+              className={`py-2 text-xs font-semibold rounded-lg transition-all ${
+                type === 'income'
+                  ? 'bg-white dark:bg-slate-900 text-emerald-600 dark:text-emerald-400 shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+              }`}
             >
-              <option value="">Select category...</option>
-              {filteredCategories.map((cat) => (
-                <option key={cat.id} value={cat.id}>
-                  {cat.name}
-                </option>
-              ))}
-            </Select>
-          )}
-        </div>
+              Income
+            </button>
+            <button
+              type="button"
+              onClick={() => handleTypeChange('transfer')}
+              className={`py-2 text-xs font-semibold rounded-lg transition-all ${
+                type === 'transfer'
+                  ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+              }`}
+            >
+              Transfer
+            </button>
+          </div>
+
+          {/* Amount Input */}
+          <Input
+            label="Amount"
+            type="text"
+            placeholder="0.00"
+            value={amountStr}
+            onChange={(e) => setAmountStr(e.target.value)}
+            error={errors.amount}
+            leftIcon={<span className="font-bold text-slate-500">{currencyConfig.symbol}</span>}
+            className="text-lg font-semibold tabular-nums"
+            autoFocus
+          />
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Account Selector */}
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label htmlFor="tx-account-select" className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                  {type === 'transfer' ? 'From Account' : 'Account'}
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setIsAccountModalOpen(true)}
+                  className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-400 hover:underline inline-flex items-center gap-1"
+                  title="Add new bank or card account"
+                >
+                  <Plus className="w-3 h-3" />
+                  <span>+ Add Bank</span>
+                </button>
+              </div>
+              <Select
+                id="tx-account-select"
+                value={accountId}
+                onChange={(e) => setAccountId(e.target.value)}
+                error={errors.accountId}
+              >
+                <option value="">Select account...</option>
+                {availableAccounts.map((acc) => (
+                  <option key={acc.id} value={acc.id}>
+                    {acc.name} ({acc.type.toUpperCase()})
+                  </option>
+                ))}
+              </Select>
+            </div>
+
+            {/* Category or To Account */}
+            {type === 'transfer' ? (
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label htmlFor="tx-to-account-select" className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                    To Account
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setIsAccountModalOpen(true)}
+                    className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-400 hover:underline inline-flex items-center gap-1"
+                    title="Add new bank or card account"
+                  >
+                    <Plus className="w-3 h-3" />
+                    <span>+ Add Bank</span>
+                  </button>
+                </div>
+                <Select
+                  id="tx-to-account-select"
+                  value={toAccountId}
+                  onChange={(e) => setToAccountId(e.target.value)}
+                  error={errors.toAccountId}
+                >
+                  <option value="">Select destination...</option>
+                  {availableAccounts.map((acc) => (
+                    <option key={acc.id} value={acc.id} disabled={acc.id === accountId}>
+                      {acc.name} ({acc.type.toUpperCase()})
+                    </option>
+                  ))}
+                </Select>
+              </div>
+            ) : (
+              <Select
+                label="Category"
+                value={categoryId}
+                onChange={(e) => setCategoryId(e.target.value)}
+                error={errors.categoryId}
+              >
+                <option value="">Select category...</option>
+                {filteredCategories.map((cat) => (
+                  <option key={cat.id} value={cat.id}>
+                    {cat.name}
+                  </option>
+                ))}
+              </Select>
+            )}
+          </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Input
@@ -296,5 +343,12 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
         </div>
       </form>
     </Modal>
+
+    {/* Instant Add Bank Account Modal */}
+    <AccountModal
+      isOpen={isAccountModalOpen}
+      onClose={() => setIsAccountModalOpen(false)}
+    />
+  </>
   );
 };

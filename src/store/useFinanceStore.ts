@@ -13,7 +13,7 @@ import {
 } from '../types/finance';
 import { storage } from '../lib/storage';
 import { api } from '../lib/api';
-import { getSeedData, getCleanInitialData, DEFAULT_CATEGORIES } from '../lib/seedData';
+import { getSeedData, getCleanInitialData, DEFAULT_CATEGORIES, DEFAULT_ACCOUNTS } from '../lib/seedData';
 
 interface FinanceState extends FinanceData {
   isLoading: boolean;
@@ -140,7 +140,7 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
         const cleanDefault = getCleanInitialData();
         set({
           transactions: saved.transactions || [],
-          accounts: saved.accounts || [],
+          accounts: saved.accounts && saved.accounts.length > 0 ? saved.accounts : DEFAULT_ACCOUNTS,
           categories: saved.categories && saved.categories.length > 0 ? saved.categories : DEFAULT_CATEGORIES,
           budgets: saved.budgets || [],
           goals: saved.goals || [],
@@ -582,7 +582,7 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
     await storage.clearData();
     set({
       transactions: [],
-      accounts: [],
+      accounts: DEFAULT_ACCOUNTS,
       categories: DEFAULT_CATEGORIES,
       budgets: [],
       goals: [],
