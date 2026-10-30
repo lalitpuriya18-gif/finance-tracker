@@ -118,8 +118,10 @@ def extract_amount(text: str) -> Optional[float]:
         r"(?:INR|Rs\.?|₹|\$|EUR|€)\s*([\d,]+(?:\.\d{1,2})?)",
         # 450.00 INR / 1250.00 Rs
         r"([\d,]+(?:\.\d{1,2})?)\s*(?:INR|Rs\.?|₹)",
-        # "for 450.00" or "of 450.00"
-        r"(?:for|of|amount)\s+(?:INR|Rs\.?|₹)?\s*([\d,]+(?:\.\d{1,2})?)",
+        # "for Rs. 450.00" or "amount 450.00"
+        r"(?:for|of|amount)\s+(?:INR|Rs\.?|₹)\s*([\d,]+(?:\.\d{1,2})?)",
+        r"(?:for|of|amount)\s+([\d,]+(?:\.\d{1,2})?)\s*(?:INR|Rs\.?|₹)",
+        r"(?:for|of|amount)\s+([\d,]+(?:\.\d{1,2})?)(?!\s*(?:min|minute|hour|day|sec|year|month))",
     ]
     for p in patterns:
         m = re.search(p, text, re.IGNORECASE)
@@ -265,13 +267,30 @@ def match_account_id(mask: Optional[str], accounts: Optional[List[Dict[str, Any]
     return accounts[0]["id"] if accounts else "acc-primary-bank"
 
 
+def is_otp_or_non_financial(text: str) -> bool:
+    """
+    Detects OTPs, 2-factor codes, password resets, and marketing SMS
+    to avoid false positive transactions.
+    """
+    lower = text.lower()
+    otp_words = ["otp", "verification code", "one time password", "secret code", "security code", "password reset"]
+    if any(w in lower for w in otp_words):
+        # Only treat as transaction if it explicitly mentions money debited or credited
+        if not ("debited" in lower or "credited" in lower):
+            return True
+    return False
+
+
 def parse_single_sms(text: str, accounts: Optional[List[Dict[str, Any]]] = None) -> Optional[Dict[str, Any]]:
     """
     Parses a single SMS or email notification string into a FinTrack transaction dictionary.
-    Returns None if no valid monetary amount is detected.
+    Returns None if no valid monetary amount is detected or message is non-financial.
     """
     cleaned_text = text.strip()
     if not cleaned_text:
+        return None
+
+    if is_otp_or_non_financial(cleaned_text):
         return None
 
     amount = extract_amount(cleaned_text)

@@ -733,3 +733,71 @@ Salary of INR 85,000.00 credited to A/C ..8921 on 30-OCT-23 by TECH CORP PVT LTD
     });
   }
 }
+
+/* ----------------------------------------------------------------------------
+ * 10. BACKGROUND SMS WEBHOOK UTILITIES
+ * ---------------------------------------------------------------------------- */
+
+/**
+ * Copies the Webhook URL to the clipboard and shows a toast confirmation.
+ */
+function copyWebhookUrl() {
+  const input = document.getElementById('webhookUrlInput');
+  if (input) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(input.value).then(() => {
+        showToast('Webhook URL copied to clipboard!', 'success');
+      }).catch(() => {
+        input.select();
+        document.execCommand('copy');
+        showToast('Webhook URL copied!', 'success');
+      });
+    } else {
+      input.select();
+      document.execCommand('copy');
+      showToast('Webhook URL copied!', 'success');
+    }
+  }
+}
+
+/**
+ * Triggers a live webhook simulation from the UI to test background ingestion.
+ */
+async function simulateLiveWebhookSms() {
+  const btn = document.getElementById('btnSimulateWebhookSms');
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<span>⏳ Simulating Webhook...</span>';
+  }
+
+  try {
+    const res = await fetch('/api/webhook/sms/test', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({})
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.error || 'Failed to simulate webhook');
+    }
+
+    if (data.status === 'duplicate') {
+      showToast(`Webhook captured alert: Already recorded (${data.message})`, 'info');
+    } else if (data.status === 'recorded') {
+      const first = (data.imported && data.imported[0]) || {};
+      const amountStr = first.amount ? `₹${parseFloat(first.amount).toLocaleString('en-IN')}` : '';
+      const payeeStr = first.payee || first.merchant || 'Bank Transaction';
+      showToast(`⚡ Background SMS Webhook Received & Logged ${amountStr} (${payeeStr}) into SQLite!`, 'success');
+    } else {
+      showToast(`Webhook status: ${data.status}`, 'info');
+    }
+  } catch (err) {
+    showToast(`Simulation failed: ${err.message}`, 'error');
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = '<span>⚡ Simulate Live Bank SMS</span>';
+    }
+  }
+}

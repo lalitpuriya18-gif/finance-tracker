@@ -14,6 +14,7 @@ Written with clear, beginner-friendly comments so any student or evaluator can u
 import os
 import sys
 import time
+import socket
 from pathlib import Path
 from datetime import datetime, timezone
 
@@ -28,6 +29,24 @@ from backend.database import Database, DEFAULT_DB_PATH
 from backend.sms_parser import parse_multi_sms
 
 START_TIME = time.time()
+
+
+def get_local_ip() -> str:
+    """
+    Finds the machine's local Wi-Fi / LAN IP address (e.g. 192.168.1.35)
+    using Python's standard socket library with 0 external packages.
+    Allows mobile phones on the same Wi-Fi to push webhook alerts directly to this PC.
+    """
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        # Connecting to a public IP picks the host's active local interface without sending traffic
+        s.connect(("8.8.8.8", 80))
+        ip = s.getsockname()[0]
+    except Exception:
+        ip = "127.0.0.1"
+    finally:
+        s.close()
+    return ip
 
 
 def get_page_context(db: Database) -> dict:
@@ -130,6 +149,10 @@ def get_page_context(db: Database) -> dict:
                 })
     category_breakdown.sort(key=lambda x: x["amount"], reverse=True)
 
+    local_ip = get_local_ip()
+    port = int(os.environ.get("PORT", 5000))
+    webhook_url = f"http://{local_ip}:{port}/api/webhook/sms"
+
     return {
         "global_accounts": accounts,
         "global_categories": categories,
@@ -152,6 +175,8 @@ def get_page_context(db: Database) -> dict:
         "mandates_list": enriched_mandates,
         "category_breakdown": category_breakdown,
         "current_date": datetime.now().strftime("%Y-%m-%d"),
+        "local_ip": local_ip,
+        "webhook_url": webhook_url,
     }
 
 
@@ -602,6 +627,157 @@ def create_app(db: Database = None) -> Flask:
             "success": True,
             "created": created,
             "count": len(created),
+        }), 201
+
+    # =========================================================================
+    # 13. AUTOMATED BACKGROUND SMS & NOTIFICATION WEBHOOK
+    # =========================================================================
+
+    @app.route("/api/webhook/sms/status", methods=["GET"])
+    def webhook_sms_status():
+        """
+        Returns active status, local Wi-Fi IP, and webhook URL for mobile forwarders.
+        """
+        ip = get_local_ip()
+        port = int(os.environ.get("PORT", 5000))
+        return jsonify({
+            "status": "active",
+            "local_ip": ip,
+            "port": port,
+            "webhook_url": f"http://{ip}:{port}/api/webhook/sms",
+            "message": "FinTrack Background SMS Webhook is active and listening for mobile forwarders.",
+        })
+
+    @app.route("/api/webhook/sms", methods=["POST"])
+    def webhook_receive_sms():
+        """
+        Silent background receiver for mobile SMS forwarder apps (e.g. SMS Forwarder, MacroDroid, Tasker).
+        Extracts financial alert details, eliminates duplicate notifications, and logs
+        transactions directly into SQLite without manual user intervention.
+        """
+        raw_text = ""
+        if request.is_json:
+            body = request.get_json(silent=True) or {}
+            raw_text = body.get("text") or body.get("message") or body.get("body") or body.get("sms") or body.get("content") or ""
+        elif request.form:
+            raw_text = request.form.get("text") or request.form.get("message") or request.form.get("body") or request.form.get("sms") or ""
+        else:
+            raw_text = request.get_data(as_text=True) or ""
+
+        if not raw_text.strip():
+            return jsonify({
+                "status": "ignored",
+                "error": "Empty SMS body received",
+            }), 400
+
+        data = app.db.get_full_bootstrap()
+        accounts = data.get("accounts", [])
+        parsed_items = parse_multi_sms(raw_text, accounts)
+
+        if not parsed_items:
+            return jsonify({
+                "status": "skipped",
+                "message": "Non-transaction alert ignored (no financial data detected).",
+                "raw": raw_text[:120],
+            }), 200
+
+        imported = []
+        duplicates = []
+
+        for item in parsed_items:
+            # Check for existing duplicate transaction on same date with same amount and payee
+            with app.db.get_connection() as conn:
+                existing = conn.execute(
+                    """
+                    SELECT id FROM transactions
+                    WHERE date = ? AND amount = ? AND (merchant = ? OR note LIKE ?)
+                    LIMIT 1
+                    """,
+                    (item["date"], int(item["amount"]), item["payee"], f"%{item['payee']}%")
+                ).fetchone()
+
+            if existing:
+                duplicates.append({
+                    "id": existing["id"],
+                    "payee": item["payee"],
+                    "amount": item["amount"],
+                    "date": item["date"],
+                })
+            else:
+                created = app.db.add_transaction(item)
+                imported.append(created)
+
+        if not imported and duplicates:
+            return jsonify({
+                "status": "duplicate",
+                "message": f"Transaction already recorded ({duplicates[0]['payee']} ₹{duplicates[0]['amount']})",
+                "duplicates": duplicates,
+                "count": 0,
+            }), 200
+
+        return jsonify({
+            "status": "recorded",
+            "imported": imported,
+            "duplicates": duplicates,
+            "count": len(imported),
+        }), 201
+
+    @app.route("/api/webhook/sms/test", methods=["POST"])
+    def webhook_simulate_sms():
+        """
+        Simulates an incoming live bank SMS debit alert to verify end-to-end background ingestion.
+        """
+        payload = request.get_json(silent=True) or {}
+        sample_sms = payload.get("text") or (
+            "Sent Rs.450.00 from HDFC Bank A/C *8921 to SWIGGY on 30-OCT-23. "
+            "UPI Ref 329012345678. Not you? Call 18002583838."
+        )
+
+        data = app.db.get_full_bootstrap()
+        accounts = data.get("accounts", [])
+        parsed_items = parse_multi_sms(sample_sms, accounts)
+
+        if not parsed_items:
+            return jsonify({"status": "skipped", "message": "No transaction parsed"}), 200
+
+        imported = []
+        duplicates = []
+
+        for item in parsed_items:
+            with app.db.get_connection() as conn:
+                existing = conn.execute(
+                    """
+                    SELECT id FROM transactions
+                    WHERE date = ? AND amount = ? AND (merchant = ? OR note LIKE ?)
+                    LIMIT 1
+                    """,
+                    (item["date"], int(item["amount"]), item["payee"], f"%{item['payee']}%")
+                ).fetchone()
+
+            if existing:
+                duplicates.append({
+                    "id": existing["id"],
+                    "payee": item["payee"],
+                    "amount": item["amount"],
+                    "date": item["date"],
+                })
+            else:
+                created = app.db.add_transaction(item)
+                imported.append(created)
+
+        if not imported and duplicates:
+            return jsonify({
+                "status": "duplicate",
+                "message": f"Transaction already recorded ({duplicates[0]['payee']} ₹{duplicates[0]['amount']})",
+                "duplicates": duplicates,
+                "count": 0,
+            }), 200
+
+        return jsonify({
+            "status": "recorded",
+            "imported": imported,
+            "duplicates": duplicates,
+            "count": len(imported),
         }), 201
 
     return app
