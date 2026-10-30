@@ -25,6 +25,7 @@ if str(ROOT_DIR) not in sys.path:
 from flask import Flask, jsonify, request, render_template
 from flask_cors import CORS
 from backend.database import Database, DEFAULT_DB_PATH
+from backend.sms_parser import parse_multi_sms
 
 START_TIME = time.time()
 
@@ -552,6 +553,56 @@ def create_app(db: Database = None) -> Flask:
         app.db.clear_all()
         data = app.db.get_full_bootstrap()
         return jsonify({"success": True, "data": data})
+
+    # =========================================================================
+    # 12. BANK SMS / EMAIL ALERT AUTO-PARSER API
+    # =========================================================================
+
+    @app.route("/api/parser/sms", methods=["POST"])
+    def parse_sms_alerts():
+        """
+        Parses raw bank SMS or Email notifications using regular expressions.
+        Extracts amount, transaction type, merchant/payee, date, account mask,
+        and auto-assigns an appropriate category.
+        """
+        payload = request.get_json(silent=True) or {}
+        raw_text = payload.get("text", "")
+        if not raw_text.strip():
+            return jsonify({"error": "No alert text provided for parsing", "parsed": [], "count": 0}), 400
+
+        data = app.db.get_full_bootstrap()
+        accounts = data.get("accounts", [])
+        parsed_items = parse_multi_sms(raw_text, accounts)
+
+        return jsonify({
+            "success": True,
+            "parsed": parsed_items,
+            "count": len(parsed_items),
+        })
+
+    @app.route("/api/parser/sms/confirm", methods=["POST"])
+    def confirm_sms_transactions():
+        """
+        Commits reviewed, auto-parsed transactions directly into the SQLite ledger.
+        """
+        payload = request.get_json(silent=True) or {}
+        transactions_to_add = payload.get("transactions", [])
+        if not transactions_to_add:
+            return jsonify({"error": "No transactions submitted for confirmation"}), 400
+
+        created = []
+        for tx in transactions_to_add:
+            try:
+                res = app.db.add_transaction(tx)
+                created.append(res)
+            except Exception:
+                pass
+
+        return jsonify({
+            "success": True,
+            "created": created,
+            "count": len(created),
+        }), 201
 
     return app
 

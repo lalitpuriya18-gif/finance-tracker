@@ -10,7 +10,16 @@
       Search, filter, and audit all recorded financial inflows and expenditures.
     </p>
   </div>
-  <div style="display: flex; gap: 0.75rem;">
+  <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+    <!-- Auto-Fetch SMS CTA -->
+    <button class="btn btn-outline" data-modal-target="smsParserModal" style="border-color: var(--primary-light); color: var(--primary-text); font-weight: 600;">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+      </svg>
+      <span>⚡ Auto-Fetch SMS</span>
+    </button>
+    
+    <!-- Export CSV -->
     <button class="btn btn-outline" onclick="exportTransactionsCsv()">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
@@ -19,9 +28,11 @@
       </svg>
       <span>Export CSV</span>
     </button>
+
+    <!-- Add Transaction Manual -->
     <button class="btn btn-primary" data-modal-target="addTransactionModal">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <line x1="12" x2="12" y1="5" y2="19"></line>
+        <line x1="12" y1="5" x2="19" y2="19"></line>
         <line x1="5" y1="19" x2="12" y2="12"></line>
       </svg>
       <span>+ Add Transaction</span>
@@ -115,7 +126,7 @@
         {% else %}
           <tr>
             <td colspan="7" style="text-align: center; color: var(--text-muted); padding: 3rem;">
-              No transactions found matching your criteria. Click <strong>+ Add Transaction</strong> to record an entry.
+              No transactions found matching your criteria. Click <strong>⚡ Auto-Fetch SMS</strong> or <strong>+ Add Transaction</strong> to record an entry.
             </td>
           </tr>
         {% endfor %}

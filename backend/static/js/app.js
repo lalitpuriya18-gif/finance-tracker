@@ -3,7 +3,7 @@
  * FinTrack — Application JavaScript
  * ============================================================================
  * Beginner-friendly, vanilla JavaScript for DOM manipulation, modal handling,
- * real-time filtering, theme toggling, and asynchronous Fetch API calls to Flask.
+ * real-time filtering, theme toggling, SMS alert auto-parsing, and async Fetch API.
  * 
  * Written with clean, understandable code so any student can explain how it works.
  * ============================================================================
@@ -17,6 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initMobileMenu();
   initTransactionFilters();
   initFormSubmissions();
+  initSmsParser();
 });
 
 /* ----------------------------------------------------------------------------
@@ -305,7 +306,6 @@ function initFormSubmissions() {
 
         showToast('Transaction added successfully!', 'success');
         closeModal('addTransactionModal');
-        // Refresh page after short delay to show updated data
         setTimeout(() => window.location.reload(), 400);
       } catch (err) {
         showToast(err.message, 'error');
@@ -590,5 +590,146 @@ async function clearAllData() {
     setTimeout(() => window.location.href = '/', 500);
   } catch (err) {
     showToast(err.message, 'error');
+  }
+}
+
+/* ----------------------------------------------------------------------------
+ * 9. BANK SMS & EMAIL AUTO-PARSER ENGINE
+ * ---------------------------------------------------------------------------- */
+
+let extractedSmsCandidates = [];
+
+function initSmsParser() {
+  const sampleButtons = document.querySelectorAll('.sms-sample-btn');
+  const textarea = document.getElementById('smsInputText');
+  const btnExtract = document.getElementById('btnExtractSms');
+  const btnConfirm = document.getElementById('btnConfirmSmsImport');
+  const previewSection = document.getElementById('smsPreviewSection');
+  const candidatesList = document.getElementById('smsCandidatesList');
+  const badgeCount = document.getElementById('smsExtractedBadge');
+
+  if (!textarea || !btnExtract) return;
+
+  const SAMPLE_TEXTS = {
+    swiggy: "Sent Rs. 450.00 from HDFC Bank A/C *8921 to SWIGGY on 30-OCT-23. UPI Ref 330412849201.",
+    salary: "Salary of INR 85,000.00 credited to A/C ..8921 on 30-OCT-23 by TECH CORP PVT LTD. Avail Bal: INR 1,20,400.00.",
+    amazon: "INR 2,499.00 spent on your Card ending 4092 at AMAZON INDIA on 29-Oct-23. Avail Lmt: INR 75,000.00.",
+    uber: "Rs 380.00 debited from ICICI Bank A/C **8921 at UBER INDIA on 30-OCT-23. UPI Ref 33012948129.",
+    multi: `Sent Rs. 450.00 from HDFC Bank A/C *8921 to SWIGGY on 30-OCT-23. UPI Ref 330412849201.
+
+INR 2,499.00 spent on your Card ending 4092 at AMAZON INDIA on 29-Oct-23.
+
+Rs 380.00 debited from ICICI Bank A/C **8921 at UBER INDIA on 30-OCT-23.
+
+Salary of INR 85,000.00 credited to A/C ..8921 on 30-OCT-23 by TECH CORP PVT LTD.`
+  };
+
+  // Click sample buttons to populate text
+  sampleButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const sampleKey = btn.getAttribute('data-sample');
+      if (SAMPLE_TEXTS[sampleKey]) {
+        textarea.value = SAMPLE_TEXTS[sampleKey];
+        showToast('Sample alert loaded into text box', 'info');
+      }
+    });
+  });
+
+  // Extract & Preview Button Click
+  btnExtract.addEventListener('click', async () => {
+    const rawText = textarea.value.trim();
+    if (!rawText) {
+      showToast('Please paste or type an SMS notification first', 'error');
+      return;
+    }
+
+    btnExtract.disabled = true;
+    btnExtract.innerText = 'Extracting...';
+
+    try {
+      const response = await fetch('/api/parser/sms', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: rawText })
+      });
+
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Failed to parse text');
+      }
+
+      if (data.count === 0) {
+        showToast('No transaction amounts found in text. Check the format.', 'warning');
+        return;
+      }
+
+      extractedSmsCandidates = data.parsed;
+      badgeCount.innerText = `${data.count} Candidate${data.count > 1 ? 's' : ''}`;
+      previewSection.style.display = 'block';
+      if (btnConfirm) btnConfirm.style.display = 'inline-flex';
+
+      // Render candidate cards
+      candidatesList.innerHTML = '';
+      extractedSmsCandidates.forEach((item) => {
+        const card = document.createElement('div');
+        card.style.cssText = 'padding: 0.75rem 1rem; background-color: var(--bg-card-subtle); border-radius: var(--radius-md); border: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;';
+        
+        const isIncome = item.type === 'income';
+        card.innerHTML = `
+          <div>
+            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.2rem;">
+              <span style="font-weight: 700; font-size: 0.95rem;">${item.payee}</span>
+              <span class="badge ${isIncome ? 'badge-success' : 'badge-danger'}">${isIncome ? 'Income' : 'Expense'}</span>
+              <span class="badge badge-info">${item.categoryId.replace('cat-', '').toUpperCase()}</span>
+            </div>
+            <div style="font-size: 0.75rem; color: var(--text-muted);">
+              Date: <strong>${item.date}</strong> • Account: <strong>${item.accountMask ? '*' + item.accountMask : 'Primary Bank'}</strong>
+            </div>
+          </div>
+          <div style="font-size: 1.15rem; font-weight: 800; color: ${isIncome ? 'var(--accent-income)' : 'var(--accent-expense)'};">
+            ${isIncome ? '+' : '-'}₹${parseFloat(item.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+          </div>
+        `;
+        candidatesList.appendChild(card);
+      });
+
+      showToast(`Extracted ${data.count} transaction${data.count > 1 ? 's' : ''}! Review and confirm.`, 'success');
+    } catch (err) {
+      showToast(err.message, 'error');
+    } finally {
+      btnExtract.disabled = false;
+      btnExtract.innerText = 'Extract & Preview Transactions →';
+    }
+  });
+
+  // Confirm & Import to Ledger
+  if (btnConfirm) {
+    btnConfirm.addEventListener('click', async () => {
+      if (extractedSmsCandidates.length === 0) return;
+
+      btnConfirm.disabled = true;
+      btnConfirm.innerText = 'Importing...';
+
+      try {
+        const response = await fetch('/api/parser/sms/confirm', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ transactions: extractedSmsCandidates })
+        });
+
+        const data = await response.json();
+        if (!response.ok || !data.success) {
+          throw new Error(data.error || 'Failed to import transactions');
+        }
+
+        showToast(`Successfully added ${data.count} transaction${data.count > 1 ? 's' : ''} to ledger!`, 'success');
+        closeModal('smsParserModal');
+        setTimeout(() => window.location.reload(), 500);
+      } catch (err) {
+        showToast(err.message, 'error');
+        btnConfirm.disabled = false;
+        btnConfirm.innerText = 'Confirm & Import to Ledger';
+      }
+    });
   }
 }
