@@ -5,13 +5,17 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "server": "tsx server/server.ts",
-    "dev:all": "concurrently -k \"npm run server\" \"npm run dev\"",
+    "server": "python backend/app.py",
+    "server:py": "python backend/app.py",
+    "server:node": "tsx server/server.ts",
+    "dev:all": "concurrently -k \"python backend/app.py\" \"vite\"",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview",
     "test": "vitest",
-    "test:run": "vitest run"
+    "test:run": "vitest run",
+    "test:py": "python -m pytest backend/tests",
+    "test:all": "vitest run && python -m pytest backend/tests"
   },
   "dependencies": {
     "clsx": "^2.1.1",
