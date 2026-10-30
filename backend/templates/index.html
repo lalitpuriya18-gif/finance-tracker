@@ -1,0 +1,212 @@
+{% extends "base.html" %}
+
+{% block title %}FinTrack — Financial Dashboard{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 1rem;">
+  <div>
+    <h1 style="font-size: 1.75rem; font-weight: 700; margin-bottom: 0.25rem;">
+      Welcome back, {{ user_profile.name if user_profile else 'Arjun' }} 👋
+    </h1>
+    <p style="color: var(--text-muted); font-size: 0.95rem;">
+      Here is your automated cashflow and personal financial pulse for <strong>October 2023</strong>.
+    </p>
+  </div>
+  <button class="btn btn-primary" data-modal-target="addTransactionModal">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <line x1="12" y1="5" x2="19" y2="19"></line>
+      <line x1="5" y1="19" x2="12" y2="12"></line>
+    </svg>
+    <span>+ Add Transaction</span>
+  </button>
+</div>
+
+<!-- ========================================================================
+     1. KPI METRIC CARDS
+     ======================================================================== -->
+<section class="kpi-grid">
+  <!-- Total Net Worth -->
+  <div class="kpi-card">
+    <div class="kpi-label">
+      <span>Total Net Worth</span>
+      <span class="badge badge-success">Live SQLite</span>
+    </div>
+    <div class="kpi-value">₹{{ "{:,.2f}".format(summary.net_worth) }}</div>
+    <div class="kpi-footer">Across all connected accounts & wallets</div>
+  </div>
+
+  <!-- Monthly Inflow -->
+  <div class="kpi-card">
+    <div class="kpi-label">
+      <span>Monthly Inflow</span>
+      <span class="badge badge-info">Oct 2023</span>
+    </div>
+    <div class="kpi-value income">+₹{{ "{:,.2f}".format(summary.monthly_income) }}</div>
+    <div class="kpi-footer">Total deposits and incoming earnings</div>
+  </div>
+
+  <!-- Monthly Outflow -->
+  <div class="kpi-card">
+    <div class="kpi-label">
+      <span>Monthly Outflow</span>
+      <span class="badge badge-danger">Oct 2023</span>
+    </div>
+    <div class="kpi-value expense">-₹{{ "{:,.2f}".format(summary.monthly_expense) }}</div>
+    <div class="kpi-footer">Total expenditures and recurring debits</div>
+  </div>
+
+  <!-- Savings Rate -->
+  <div class="kpi-card">
+    <div class="kpi-label">
+      <span>Savings Velocity</span>
+      <span class="badge {% if summary.savings_rate >= 20 %}badge-success{% else %}badge-warning{% endif %}">
+        {{ summary.savings_rate }}% Rate
+      </span>
+    </div>
+    <div class="kpi-value">{{ summary.savings_rate }}%</div>
+    <div class="kpi-footer">
+      {% if summary.net_savings >= 0 %}
+        Surplus of ₹{{ "{:,.2f}".format(summary.net_savings) }}
+      {% else %}
+        Deficit of ₹{{ "{:,.2f}".format(summary.net_savings|abs) }}
+      {% endif %}
+    </div>
+  </div>
+</section>
+
+<!-- ========================================================================
+     2. DASHBOARD MAIN GRID
+     ======================================================================== -->
+<div class="dashboard-grid">
+  
+  <!-- Left Column: Financial Summary & Recent Transactions -->
+  <div>
+    <!-- Cashflow Summary Card -->
+    <div class="card">
+      <div class="card-header">
+        <h2 class="card-title">Monthly Financial Summary</h2>
+        <a href="/reports" class="btn btn-outline btn-sm">View Analytics Report &rarr;</a>
+      </div>
+      <div style="display: flex; gap: 1.5rem; flex-wrap: wrap; margin-bottom: 1rem;">
+        <div style="flex: 1; padding: 1rem; background-color: var(--bg-card-subtle); border-radius: var(--radius-md);">
+          <div style="font-size: 0.8rem; color: var(--text-muted);">Incoming Cashflow</div>
+          <div style="font-size: 1.25rem; font-weight: 700; color: var(--accent-income);">+₹{{ "{:,.2f}".format(summary.monthly_income) }}</div>
+        </div>
+        <div style="flex: 1; padding: 1rem; background-color: var(--bg-card-subtle); border-radius: var(--radius-md);">
+          <div style="font-size: 0.8rem; color: var(--text-muted);">Outgoing Expenses</div>
+          <div style="font-size: 1.25rem; font-weight: 700; color: var(--accent-expense);">-₹{{ "{:,.2f}".format(summary.monthly_expense) }}</div>
+        </div>
+        <div style="flex: 1; padding: 1rem; background-color: var(--bg-card-subtle); border-radius: var(--radius-md);">
+          <div style="font-size: 0.8rem; color: var(--text-muted);">Net Balance</div>
+          <div style="font-size: 1.25rem; font-weight: 700; color: {% if summary.net_savings >= 0 %}var(--accent-income){% else %}var(--accent-expense){% endif %};">
+            {% if summary.net_savings >= 0 %}+{% endif %}₹{{ "{:,.2f}".format(summary.net_savings) }}
+          </div>
+        </div>
+      </div>
+      <div>
+        {% if summary.net_savings >= 0 %}
+          <span class="badge badge-success">● Healthy Surplus — Living well within financial means</span>
+        {% else %}
+          <span class="badge badge-danger">● Deficit Alert — Expenditures exceeded income this month</span>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Recent Transactions Table Card -->
+    <div class="card">
+      <div class="card-header">
+        <h2 class="card-title">Recent Transactions</h2>
+        <a href="/transactions" class="btn btn-outline btn-sm">View all ledger transactions &rarr;</a>
+      </div>
+      
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Description / Payee</th>
+              <th>Category</th>
+              <th>Account</th>
+              <th style="text-align: right;">Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for tx in recent_transactions %}
+              <tr data-type="{{ tx.type }}">
+                <td>{{ tx.date }}</td>
+                <td style="font-weight: 500;">{{ tx.payee or tx.notes or 'Transaction' }}</td>
+                <td><span class="badge badge-info">{{ tx.category_name or 'General' }}</span></td>
+                <td style="color: var(--text-muted);">{{ tx.account_name or 'Bank' }}</td>
+                <td style="text-align: right;" class="{% if tx.type == 'income' %}amount-income{% else %}amount-expense{% endif %}">
+                  {% if tx.type == 'income' %}+{% else %}-{% endif %}₹{{ "{:,.2f}".format(tx.amount) }}
+                </td>
+              </tr>
+            {% else %}
+              <tr>
+                <td colspan="5" style="text-align: center; color: var(--text-muted); padding: 2rem;">
+                  No transactions recorded yet. Click <strong>+ Add Transaction</strong> to record your first income or expense!
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right Column: Quick Budgets & Accounts Snapshot -->
+  <div>
+    <!-- Quick Budgets Card -->
+    <div class="card">
+      <div class="card-header">
+        <h2 class="card-title">Monthly Budgets</h2>
+        <a href="/budgets" class="btn btn-outline btn-sm">View All &rarr;</a>
+      </div>
+      
+      {% for b in active_budgets %}
+        <div style="margin-bottom: 1.25rem;">
+          <div style="display: flex; justify-content: space-between; font-size: 0.875rem; margin-bottom: 0.25rem;">
+            <span style="font-weight: 600;">{{ b.category_name }}</span>
+            <span style="color: var(--text-muted);">₹{{ "{:,.0f}".format(b.spent) }} / ₹{{ "{:,.0f}".format(b.monthly_limit) }}</span>
+          </div>
+          <div class="progress-bar-container">
+            <div class="progress-bar-fill {% if b.percentage > 100 %}progress-danger{% elif b.percentage > 85 %}progress-warning{% else %}progress-success{% endif %}" 
+                 style="width: {{ [b.percentage, 100]|min }}%;"></div>
+          </div>
+          <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--text-light);">
+            <span>{{ b.percentage }}% utilized</span>
+            <span>₹{{ "{:,.0f}".format([b.monthly_limit - b.spent, 0]|max) }} remaining</span>
+          </div>
+        </div>
+      {% else %}
+        <p style="color: var(--text-muted); font-size: 0.875rem; text-align: center; padding: 1rem 0;">
+          No active category limits set. <a href="/budgets" style="color: var(--primary); font-weight: 500;">Set a budget limit</a>.
+        </p>
+      {% endfor %}
+    </div>
+
+    <!-- Connected Accounts Snapshot -->
+    <div class="card">
+      <div class="card-header">
+        <h2 class="card-title">Accounts Snapshot</h2>
+        <a href="/accounts" class="btn btn-outline btn-sm">Manage &rarr;</a>
+      </div>
+      
+      <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+        {% for acc in global_accounts %}
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; background-color: var(--bg-card-subtle); border-radius: var(--radius-md);">
+            <div>
+              <div style="font-weight: 600; font-size: 0.9rem;">{{ acc.name }}</div>
+              <div style="font-size: 0.75rem; color: var(--text-muted);">{{ acc.accountNumber or 'Wallet' }}</div>
+            </div>
+            <div style="font-weight: 700; font-size: 0.95rem; color: var(--primary-text);">
+              ₹{{ "{:,.2f}".format(acc.openingBalance) }}
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

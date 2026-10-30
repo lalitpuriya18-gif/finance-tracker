@@ -294,6 +294,7 @@ class Database:
                     "note": r["note"],
                     "descriptionDetail": r["description_detail"] or None,
                     "merchant": r["merchant"] or None,
+                    "payee": r["merchant"] or r["note"] or "Transaction",
                     "tags": json.loads(r["tags"]) if r["tags"] else [],
                     "status": r["status"] or "Completed",
                 }
@@ -381,6 +382,8 @@ class Database:
         tx_id = tx_data.get("id") or f"tx-{int(time.time() * 1000)}-{uuid.uuid4().hex[:6]}"
         now = datetime.now(timezone.utc).isoformat()
         tags_json = json.dumps(tx_data.get("tags", []))
+        merchant = tx_data.get("merchant") or tx_data.get("payee") or ""
+        note = tx_data.get("note") or tx_data.get("notes") or ""
 
         with self.get_connection() as conn:
             conn.execute(
@@ -400,9 +403,9 @@ class Database:
                     tx_data.get("toAccountId"),
                     tx_data["date"],
                     tx_data.get("time", datetime.now().strftime("%I:%M %p")),
-                    tx_data.get("note", ""),
+                    note,
                     tx_data.get("descriptionDetail"),
-                    tx_data.get("merchant"),
+                    merchant,
                     tags_json,
                     tx_data.get("status", "Completed"),
                     now,
@@ -412,6 +415,9 @@ class Database:
         return {
             "id": tx_id,
             **tx_data,
+            "payee": merchant or note or "Transaction",
+            "merchant": merchant,
+            "note": note,
             "tags": tx_data.get("tags", []),
             "time": tx_data.get("time", datetime.now().strftime("%I:%M %p")),
             "status": tx_data.get("status", "Completed"),

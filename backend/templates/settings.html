@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+
+{% block title %}FinTrack — System Settings & Preferences{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 2rem;">
+  <h1 style="font-size: 1.75rem; font-weight: 700; margin-bottom: 0.25rem;">System Settings & Data Controls</h1>
+  <p style="color: var(--text-muted); font-size: 0.95rem;">
+    Customize application defaults, manage category taxonomies, and control database snapshots.
+  </p>
+</div>
+
+<!-- ========================================================================
+     1. REGIONAL & DISPLAY PREFERENCES
+     ======================================================================== -->
+<div class="card">
+  <div class="card-header">
+    <h2 class="card-title">Regional & Display Settings</h2>
+  </div>
+  
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.5rem;">
+    <div class="form-group">
+      <label class="form-label" for="settingCurrency">Primary Currency</label>
+      <select id="settingCurrency" class="form-control" onchange="showToast('Currency preference saved', 'success')">
+        <option value="INR" selected>INR — Indian Rupee (₹)</option>
+        <option value="USD">USD — US Dollar ($)</option>
+        <option value="EUR">EUR — Euro (€)</option>
+        <option value="GBP">GBP — British Pound (£)</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Theme Mode</label>
+      <button class="btn btn-outline" style="width: 100%; justify-content: space-between;" onclick="toggleTheme()">
+        <span>Toggle Light / Dark Mode</span>
+        <span>🌓</span>
+      </button>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="settingMonthStart">Month Billing Start Day</label>
+      <select id="settingMonthStart" class="form-control" onchange="showToast('Cycle reset day updated', 'success')">
+        <option value="1" selected>1st of each month</option>
+        <option value="5">5th of each month</option>
+        <option value="15">15th of each month</option>
+      </select>
+    </div>
+  </div>
+</div>
+
+<!-- ========================================================================
+     2. CATEGORY MANAGER
+     ======================================================================== -->
+<div class="card">
+  <div class="card-header">
+    <h2 class="card-title">Expense & Income Categories</h2>
+    <span class="badge badge-info">{{ global_categories|length }} Registered</span>
+  </div>
+
+  <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 1rem;">
+    {% for cat in global_categories %}
+      <div style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.4rem 0.85rem; background-color: var(--bg-card-subtle); border-radius: var(--radius-full); font-size: 0.85rem; border: 1px solid var(--border-color);">
+        <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background-color: {{ cat.color }};"></span>
+        <span>{{ cat.name }}</span>
+        <span style="font-size: 0.7rem; color: var(--text-light); text-transform: uppercase;">{{ cat.type }}</span>
+      </div>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- ========================================================================
+     3. DATABASE SNAPSHOT & INTEGRITY CONTROLS
+     ======================================================================== -->
+<div class="card">
+  <div class="card-header">
+    <h2 class="card-title">Database Integrity & Data Management</h2>
+    <span class="badge badge-success">SQLite (Python 3.14)</span>
+  </div>
+
+  <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.5rem;">
+    Manage local SQLite data, generate offline JSON snapshots, or reset initial sample data for demonstration.
+  </p>
+
+  <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+    <!-- Export Backup -->
+    <a href="/api/bootstrap" target="_blank" class="btn btn-outline">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+        <polyline points="7 10 12 15 17 10"></polyline>
+        <line x1="12" y1="12" x2="12" y2="15"></line>
+      </svg>
+      <span>Download JSON Database Backup</span>
+    </a>
+
+    <!-- Reset to Demo Data -->
+    <button class="btn btn-outline" onclick="resetDemoData()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path>
+      </svg>
+      <span>Reset to Demo Data</span>
+    </button>
+
+    <!-- Clear All Data -->
+    <button class="btn btn-danger" onclick="clearAllData()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="3 6 5 6 21 6"></polyline>
+        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+      </svg>
+      <span>Clear All Data (Empty Slate)</span>
+    </button>
+  </div>
+</div>
+{% endblock %}

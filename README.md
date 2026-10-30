@@ -39,6 +39,37 @@ npm run build
 
 ---
 
+## 🎓 Beginner-Friendly & Academic Architecture Guide
+
+FinTrack is built using fundamental, clean programming technologies so that a college student can easily understand, explain in an academic viva, and maintain the entire project:
+
+| Technology | Role in FinTrack | Key Implementation File |
+| :--- | :--- | :--- |
+| **HTML5** | Semantic structure for all pages, navigation, tables, and dialog forms | [`backend/templates/*.html`](file:///C:/Users/Asus/.gemini/antigravity/scratch/fintrack/backend/templates) |
+| **CSS3** | Responsive layouts using Flexbox, CSS Grid, custom variables & dark mode | [`backend/static/css/style.css`](file:///C:/Users/Asus/.gemini/antigravity/scratch/fintrack/backend/static/css/style.css) |
+| **JavaScript** | DOM manipulation, modal controls, real-time search, filters, and `fetch()` API | [`backend/static/js/app.js`](file:///C:/Users/Asus/.gemini/antigravity/scratch/fintrack/backend/static/js/app.js) |
+| **Python (Flask)** | Web server routing, template rendering (Jinja2), and JSON REST endpoints | [`backend/app.py`](file:///C:/Users/Asus/.gemini/antigravity/scratch/fintrack/backend/app.py) |
+| **SQLite** | Local relational database with ACID transactions, foreign keys, and indexes | [`backend/database.py`](file:///C:/Users/Asus/.gemini/antigravity/scratch/fintrack/backend/database.py) |
+
+### 🚀 Running the Python (Flask) Web Application
+```bash
+# Start the Flask web application
+python backend/app.py
+```
+Open **[http://127.0.0.1:5000/](http://127.0.0.1:5000/)** in your browser. All pages (`Dashboard`, `Transactions`, `Budgets`, `Goals`, `Reports`, `Accounts`, `Settings`) render directly via pure HTML5, CSS3, and JavaScript connected to SQLite!
+
+### 🧪 Running the Complete Automated Test Suite (37 Tests)
+```bash
+# Run all tests (Vitest + Pytest)
+npm run test:all
+
+# Or run only the Python backend tests (21 tests)
+npm run test:py
+# or: pytest backend/tests -v
+```
+
+---
+
 ## 📁 Project Architecture & Structure
 
 ```
