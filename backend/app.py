@@ -23,7 +23,7 @@ ROOT_DIR = Path(__file__).resolve().parent.parent
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
-from flask import Flask, jsonify, request, render_template
+from flask import Flask, jsonify, request, render_template, redirect
 from flask_cors import CORS
 from backend.database import Database, DEFAULT_DB_PATH
 from backend.sms_parser import parse_multi_sms
@@ -244,6 +244,137 @@ def create_app(db: Database = None) -> Flask:
         """Renders System Preferences, currency options, theme toggle, and database reset tools."""
         ctx = get_page_context(app.db)
         return render_template("settings.html", active_page="settings", **ctx)
+
+    # =========================================================================
+    # 2. PURE PYTHON HTML FORM HANDLERS (ZERO JAVASCRIPT REQUIRED)
+    # =========================================================================
+    # These routes process traditional HTML <form method="POST"> submissions.
+    # All parsing, validation, and database operations happen 100% in Python,
+    # and then Flask redirects the browser back with the updated SQLite data.
+    # =========================================================================
+
+    @app.route("/transactions/create", methods=["POST"])
+    def form_create_transaction():
+        """
+        Pure Python Form Handler for Adding Transactions.
+        Extracts form fields via request.form, validates inputs, and inserts into SQLite.
+        """
+        tx_type = request.form.get("type", "expense")
+        try:
+            amount = float(request.form.get("amount", 0))
+        except (ValueError, TypeError):
+            amount = 0.0
+
+        account_id = request.form.get("accountId")
+        category_id = request.form.get("categoryId")
+        payee = request.form.get("payee", "Transaction")
+        date_val = request.form.get("date", datetime.now().strftime("%Y-%m-%d"))
+        notes = request.form.get("notes", "")
+
+        if amount > 0 and account_id:
+            app.db.add_transaction({
+                "type": tx_type,
+                "amount": amount,
+                "accountId": account_id,
+                "categoryId": category_id,
+                "payee": payee,
+                "merchant": payee,
+                "date": date_val,
+                "notes": notes,
+            })
+
+        return redirect(request.referrer or "/transactions")
+
+    @app.route("/transactions/delete/<tx_id>", methods=["GET", "POST"])
+    def form_delete_transaction(tx_id):
+        """Pure Python route to delete a transaction and restore balance."""
+        app.db.delete_transaction(tx_id)
+        return redirect(request.referrer or "/transactions")
+
+    @app.route("/goals/create", methods=["POST"])
+    def form_create_goal():
+        """Pure Python Form Handler for Creating Financial Milestones."""
+        name = request.form.get("name", "New Milestone")
+        subtitle = request.form.get("subtitle", "Goal")
+        try:
+            target = float(request.form.get("targetAmount", 0))
+            saved = float(request.form.get("savedAmount", 0))
+        except (ValueError, TypeError):
+            target, saved = 0.0, 0.0
+
+        account_id = request.form.get("accountId")
+        if target > 0 and account_id:
+            app.db.add_goal({
+                "name": name,
+                "subtitle": subtitle,
+                "targetAmount": target,
+                "savedAmount": saved,
+                "targetDate": "2024-12-31",
+                "accountId": account_id,
+                "color": "#10b981",
+            })
+        return redirect(request.referrer or "/goals")
+
+    @app.route("/goals/contribute", methods=["POST"])
+    def form_contribute_goal():
+        """Pure Python Form Handler for Depositing Funds to a Milestone."""
+        goal_id = request.form.get("goalId")
+        try:
+            amount = float(request.form.get("amount", 0))
+        except (ValueError, TypeError):
+            amount = 0.0
+        account_id = request.form.get("accountId")
+
+        if goal_id and amount > 0:
+            app.db.contribute_to_goal(goal_id, amount, account_id)
+        return redirect(request.referrer or "/goals")
+
+    @app.route("/budgets/create", methods=["POST"])
+    def form_create_budget():
+        """Pure Python Form Handler for Setting Category Budget Limits."""
+        category_id = request.form.get("categoryId")
+        try:
+            limit_val = float(request.form.get("monthlyLimit", 0))
+        except (ValueError, TypeError):
+            limit_val = 0.0
+
+        if category_id and limit_val > 0:
+            app.db.set_budget({"categoryId": category_id, "monthlyLimit": int(limit_val)})
+        return redirect(request.referrer or "/budgets")
+
+    @app.route("/accounts/create", methods=["POST"])
+    def form_create_account():
+        """Pure Python Form Handler for Registering New Bank Accounts."""
+        name = request.form.get("name", "New Account")
+        acc_type = request.form.get("type", "bank")
+        try:
+            balance = float(request.form.get("openingBalance", 0))
+        except (ValueError, TypeError):
+            balance = 0.0
+        account_number = request.form.get("accountNumber", "")
+
+        app.db.add_account({
+            "name": name,
+            "type": acc_type,
+            "openingBalance": balance,
+            "accountNumber": account_number,
+            "color": "#10b981",
+        })
+        return redirect(request.referrer or "/accounts")
+
+    @app.route("/accounts/transfer", methods=["POST"])
+    def form_transfer_funds():
+        """Pure Python Form Handler for Inter-Account Transfers."""
+        from_id = request.form.get("fromAccountId")
+        to_id = request.form.get("toAccountId")
+        try:
+            amount = float(request.form.get("amount", 0))
+        except (ValueError, TypeError):
+            amount = 0.0
+
+        if from_id and to_id and amount > 0:
+            app.db.transfer_between_accounts(from_id, to_id, amount, "Intra-account transfer")
+        return redirect(request.referrer or "/accounts")
 
     # =========================================================================
     # 2. SYSTEM HEALTH & BOOTSTRAP API

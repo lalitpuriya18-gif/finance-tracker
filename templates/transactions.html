@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+
+{% block title %}FinTrack — Transactions Ledger{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+  <div>
+    <h1 style="font-size: 1.75rem; font-weight: 700; margin-bottom: 0.25rem;">Transactions Ledger</h1>
+    <p style="color: var(--text-muted); font-size: 0.95rem;">
+      Search, filter, and audit all recorded financial inflows and expenditures.
+    </p>
+  </div>
+  <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+    <!-- Auto-Fetch SMS CTA -->
+    <button class="btn btn-outline" data-modal-target="smsParserModal" style="border-color: var(--primary-light); color: var(--primary-text); font-weight: 600;">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+      </svg>
+      <span>⚡ Auto-Fetch SMS</span>
+    </button>
+    
+    <!-- Export CSV -->
+    <button class="btn btn-outline" onclick="exportTransactionsCsv()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+        <polyline points="7 10 12 15 17 10"></polyline>
+        <line x1="12" x2="12" y1="15" y2="3"></line>
+      </svg>
+      <span>Export CSV</span>
+    </button>
+
+    <!-- Add Transaction Manual -->
+    <button class="btn btn-primary" data-modal-target="addTransactionModal">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="12" y1="5" x2="19" y2="19"></line>
+        <line x1="5" y1="19" x2="12" y2="12"></line>
+      </svg>
+      <span>+ Add Transaction</span>
+    </button>
+  </div>
+</div>
+
+<!-- ========================================================================
+     FILTER & SEARCH CONTROLS
+     ======================================================================== -->
+<div class="card" style="padding: 1rem 1.25rem; margin-bottom: 1.25rem;">
+  <div class="filter-bar" style="margin-bottom: 0;">
+    <div class="filter-group">
+      <!-- Direction Filter Pills -->
+      <div class="pill-group">
+        <button class="pill-btn direction-pill active" data-direction="all">All</button>
+        <button class="pill-btn direction-pill" data-direction="expense">Expenses</button>
+        <button class="pill-btn direction-pill" data-direction="income">Income</button>
+      </div>
+
+      <!-- Real-time Search Box -->
+      <div class="search-wrapper">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" x2="16.65" y1="21" y2="16.65"></line>
+        </svg>
+        <input type="text" id="transactionSearchInput" class="input-search" placeholder="Search payee, notes...">
+      </div>
+
+      <!-- Category Filter Dropdown -->
+      <select id="categoryFilterSelect" class="select-filter">
+        <option value="">All Categories</option>
+        {% for cat in global_categories %}
+          <option value="{{ cat.id }}">{{ cat.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div>
+      <a href="/transactions" class="btn btn-outline btn-sm">Reset Filters</a>
+    </div>
+  </div>
+</div>
+
+<!-- ========================================================================
+     TRANSACTIONS DATA TABLE
+     ======================================================================== -->
+<div class="card" style="padding: 0;">
+  <div class="table-responsive">
+    <table id="transactionsTable" class="data-table">
+      <thead>
+        <tr>
+          <th style="width: 40px;"><input type="checkbox" id="selectAllCheckbox"></th>
+          <th>Date</th>
+          <th>Description / Payee</th>
+          <th>Category</th>
+          <th>Account</th>
+          <th style="text-align: right;">Amount (INR)</th>
+          <th style="text-align: center; width: 100px;">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for tx in all_transactions %}
+          <tr data-type="{{ tx.type }}" data-category="{{ tx.categoryId }}">
+            <td><input type="checkbox" class="tx-checkbox" value="{{ tx.id }}"></td>
+            <td>{{ tx.date }}</td>
+            <td>
+              <div style="font-weight: 600;">{{ tx.payee or 'Unspecified Entity' }}</div>
+              {% if tx.notes %}
+                <div style="font-size: 0.75rem; color: var(--text-muted);">{{ tx.notes }}</div>
+              {% endif %}
+            </td>
+            <td>
+              <span class="badge badge-info">{{ tx.category_name or 'General' }}</span>
+            </td>
+            <td style="color: var(--text-muted); font-size: 0.85rem;">
+              {{ tx.account_name or 'Bank' }}
+            </td>
+            <td style="text-align: right; font-size: 0.95rem;" class="{% if tx.type == 'income' %}amount-income{% else %}amount-expense{% endif %}">
+              {% if tx.type == 'income' %}+{% else %}-{% endif %}₹{{ "{:,.2f}".format(tx.amount) }}
+            </td>
+            <td style="text-align: center;">
+              <a href="/transactions/delete/{{ tx.id }}" class="btn btn-danger btn-sm" onclick="return confirm('Delete this transaction?');" title="Delete transaction">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="3 6 5 6 21 6"></polyline>
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                </svg>
+              </a>
+            </td>
+          </tr>
+        {% else %}
+          <tr>
+            <td colspan="7" style="text-align: center; color: var(--text-muted); padding: 3rem;">
+              No transactions found matching your criteria. Click <strong>⚡ Auto-Fetch SMS</strong> or <strong>+ Add Transaction</strong> to record an entry.
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Pagination Controls -->
+  <div style="padding: 1rem 1.5rem; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-color); font-size: 0.85rem; color: var(--text-muted);">
+    <span>Showing {{ all_transactions|length }} total transactions</span>
+    <div style="display: flex; gap: 0.5rem;">
+      <button class="btn btn-outline btn-sm" disabled>&larr; Previous</button>
+      <button class="btn btn-outline btn-sm" style="background-color: var(--primary); color: #fff;">1</button>
+      <button class="btn btn-outline btn-sm" disabled>Next &rarr;</button>
+    </div>
+  </div>
+</div>
+{% endblock %}

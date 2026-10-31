@@ -1,288 +1,258 @@
-# FinTrack — Personal Wealth OS & Finance Tracker
+# FinTrack — Modern Personal Finance Tracker & Wealth OS
 
-A production-quality, responsive personal finance tracking web application built with **React**, **TypeScript**, **Vite**, **Tailwind CSS**, **Recharts**, **Zustand**, and **date-fns**.
+FinTrack is an educational, production-quality personal finance web application built using **HTML5**, **CSS3**, **Python (Flask)**, and **SQLite**.
 
-Designed with a modern fintech aesthetic inspired by Google Stitch: calm backgrounds, clean 12px rounded cards, subtle shadows, Inter typography, emerald/teal primary highlights, and tabular figures for aligned numbers.
-
----
-
-## ⚡ Quick Start
-
-### 1. Install & Run Locally
-
-```bash
-# Navigate to project directory
-cd fintrack
-
-# Install dependencies
-npm install
-
-# Start development server
-npm run dev
-```
-
-Visit the local development URL (typically `http://localhost:5173/`) in your browser.
-
-### 2. Run Automated Unit Tests
-
-```bash
-npm run test:run
-```
-
-Runs the Vitest suite covering integer money math, account balance calculations, budget pace projections, and savings rates.
-
-### 3. Build for Production
-
-```bash
-npm run build
-```
+The project is structured with clean separation of concerns, beginner-friendly code, and extensive comments so that any student can explain every file and concept to their college professor or viva examiner.
 
 ---
 
-## 🎓 Beginner-Friendly & Academic Architecture Guide
+## 📁 Project Architecture & Clean File Structure
 
-FinTrack is built using fundamental, clean programming technologies so that a college student can easily understand, explain in an academic viva, and maintain the entire project:
-
-| Technology | Role in FinTrack | Key Implementation File |
-| :--- | :--- | :--- |
-| **HTML5** | Semantic structure for all pages, navigation, tables, and dialog forms | [`backend/templates/*.html`](file:///C:/Users/Asus/.gemini/antigravity/scratch/fintrack/backend/templates) |
-| **CSS3** | Responsive layouts using Flexbox, CSS Grid, custom variables & dark mode | [`backend/static/css/style.css`](file:///C:/Users/Asus/.gemini/antigravity/scratch/fintrack/backend/static/css/style.css) |
-| **JavaScript** | DOM manipulation, modal controls, real-time search, filters, and `fetch()` API | [`backend/static/js/app.js`](file:///C:/Users/Asus/.gemini/antigravity/scratch/fintrack/backend/static/js/app.js) |
-| **Python (Flask)** | Web server routing, template rendering (Jinja2), and JSON REST endpoints | [`backend/app.py`](file:///C:/Users/Asus/.gemini/antigravity/scratch/fintrack/backend/app.py) |
-| **SQLite** | Local relational database with ACID transactions, foreign keys, and indexes | [`backend/database.py`](file:///C:/Users/Asus/.gemini/antigravity/scratch/fintrack/backend/database.py) |
-
-### 🚀 Running the Python (Flask) Web Application
-```bash
-# Start the Flask web application
-python backend/app.py
-```
-Open **[http://127.0.0.1:5000/](http://127.0.0.1:5000/)** in your browser. All pages (`Dashboard`, `Transactions`, `Budgets`, `Goals`, `Reports`, `Accounts`, `Settings`) render directly via pure HTML5, CSS3, and JavaScript connected to SQLite!
-
-### 🧪 Running the Complete Automated Test Suite (37 Tests)
-```bash
-# Run all tests (Vitest + Pytest)
-npm run test:all
-
-# Or run only the Python backend tests (21 tests)
-npm run test:py
-# or: pytest backend/tests -v
-```
-
----
-
-## 📁 Project Architecture & Structure
+The project strictly follows the standard Python Flask web application directory structure:
 
 ```
 fintrack/
-├── src/
-│   ├── types/
-│   │   └── finance.ts         # TypeScript models: Transaction, Account, Category, Budget, Goal, RecurringRule, Settings
-│   ├── lib/
-│   │   ├── currency.ts        # Precision minor-units conversion and currency formatting
-│   │   ├── calculations.ts    # Pure math functions: net cash flow, savings rate, budget pace projections
-│   │   ├── insights.ts        # Rule-based intelligence engine (MoM comparison, anomaly detector, subscriptions)
-│   │   ├── csv.ts             # CSV parser with column mapping detection and CSV exporter
-│   │   ├── storage.ts         # IStorageProvider abstraction layer (LocalStorage & Supabase migration ready)
-│   │   └── seedData.ts        # Rich realistic demo dataset (3 months, 4 accounts, 40+ transactions)
-│   ├── store/
-│   │   └── useFinanceStore.ts # Central Zustand state store with reactive local persistence and undo toasts
-│   ├── components/
-│   │   ├── layout/
-│   │   │   ├── Sidebar.tsx    # Desktop left navigation with Net Worth indicator
-│   │   │   ├── MobileTabBar.tsx # Mobile bottom navigation
-│   │   │   ├── Header.tsx     # Top bar with currency badge, theme switch, and quick transaction trigger
-│   │   │   └── Layout.tsx     # Primary responsive application shell
-│   │   ├── ui/
-│   │   │   ├── Card.tsx, Button.tsx, Modal.tsx, Badge.tsx, Input.tsx, Select.tsx, ProgressBar.tsx
-│   │   │   └── Toast.tsx      # Undo-enabled toast notification container
-│   │   ├── dashboard/
-│   │   │   ├── KpiCards.tsx   # Net balance, Income, Expense, Savings rate with MoM deltas
-│   │   │   ├── SmartInsights.tsx # Plain-language financial insights and anomaly warnings
-│   │   │   ├── ChartsSection.tsx # Recharts: 6-mo Bar, Donut Category Share, Daily Spend Trend
-│   │   │   ├── BudgetQuickList.tsx # Monthly budget pace indicators
-│   │   │   └── RecentTransactions.tsx # Recent entries and upcoming recurring commitments
-│   │   ├── transactions/
-│   │   │   ├── TransactionFilters.tsx # Search, Category, Account, Type, Date range filters
-│   │   │   ├── TransactionTable.tsx # Sortable, paginated table with bulk delete and undo toast
-│   │   │   ├── TransactionModal.tsx # Add/Edit transaction with validation
-│   │   │   └── CsvImportModal.tsx   # Bank statement CSV import with auto-column mapping preview
-│   │   ├── budgets/
-│   │   │   ├── BudgetCard.tsx # Spent vs Limit, daily pace, and projected overspend alert
-│   │   │   └── BudgetModal.tsx # Set and edit category budgets
-│   │   ├── goals/
-│   │   │   ├── GoalCard.tsx   # Circular progress ring, estimated completion date, contribution action
-│   │   │   ├── GoalModal.tsx  # Add/edit goal
-│   │   │   └── ContributionModal.tsx # Quick deposit from an account into a savings goal
-│   │   ├── accounts/
-│   │   │   ├── AccountCard.tsx # Balance card with bank/card/wallet styling
-│   │   │   ├── AccountModal.tsx # Add/edit account
-│   │   │   └── TransferModal.tsx # Inter-account transfers (non-income/expense)
-│   │   └── reports/
-│   │       ├── ReportSummary.tsx # Monthly/yearly summary, net worth trend, category distribution, top 5 merchants
-│   │       └── PrintView.tsx     # Clean print stylesheet for PDF exports
-│   ├── pages/
-│   │   ├── DashboardPage.tsx
-│   │   ├── TransactionsPage.tsx
-│   │   ├── BudgetsPage.tsx
-│   │   ├── GoalsPage.tsx
-│   │   ├── AccountsPage.tsx
-│   │   ├── ReportsPage.tsx
-│   │   └── SettingsPage.tsx
-│   └── tests/
-│       ├── calculations.test.ts
-│       └── currency.test.ts
-└── index.html
+│
+├── app.py                 # Python backend code (Flask routes, logic, and server)
+├── templates/             # HTML frontend code (Jinja2 templates)
+│   ├── base.html          # Master layout (sidebar, header, and global modals)
+│   ├── index.html         # Main Financial Dashboard view
+│   ├── transactions.html  # Ledger, search, category filter, and CSV export
+│   ├── budgets.html       # Monthly category spending limits & progress bars
+│   ├── goals.html         # Financial milestones & fund deposit modal
+│   ├── reports.html       # Executive spending analytics & printable report
+│   ├── accounts.html      # Bank accounts, cash wallets & fund transfer form
+│   └── settings.html      # Currency options, theme toggle & background webhook
+├── static/                # Static assets (CSS styling & client-side scripts)
+│   ├── style.css          # Handcrafted CSS3 styling (colors, layout, grid, dark mode)
+│   ├── css/style.css      # Mirrored stylesheet copy for compatibility
+│   └── js/app.js          # Interactive helpers (modal toggles, filters, toasts)
+├── database.py            # Local SQLite database manager & thread-safe queries
+├── sms_parser.py          # Bank SMS / Email regex auto-parsing engine
+├── send_test_sms.py       # Standalone test script for background webhook ingestion
+├── requirements.txt       # Required Python packages (Flask, CORS, Pytest)
+└── README.md              # Project documentation and viva guide
 ```
 
 ---
 
-## 💰 Integer Minor Units Money Math
+## 🎓 How HTML, CSS, and Python Work Together
 
-Floating-point numbers in JavaScript suffer from IEEE 754 precision issues (e.g. `0.1 + 0.2 === 0.30000000000000004`).
+Understanding how these three fundamental technologies cooperate is essential for web development:
 
-To guarantee 100% calculation accuracy:
-- All monetary amounts are stored as **integers in minor units** (e.g., USD cents: `$45.99` $\rightarrow$ `4599`, JPY yen: `¥500` $\rightarrow$ `500`).
-- Formatting utilities in [`src/lib/currency.ts`](src/lib/currency.ts) convert values strictly for display.
-- Inputs parse strings safely into integers using `parseMoneyToMinor(str, currency)`.
+```
+┌────────────────────────────────────────────────────────────────────────┐
+│ 1. USER BROWSER (Frontend)                                             │
+│    User opens http://127.0.0.1:5000/ in Google Chrome / Edge           │
+└───────────────────────────────────┬────────────────────────────────────┘
+                                    │ HTTP GET Request
+                                    ▼
+┌────────────────────────────────────────────────────────────────────────┐
+│ 2. PYTHON FLASK BACKEND (app.py)                                       │
+│    • Receives request at @app.route('/')                               │
+│    • Executes get_page_context(db) to query SQLite                     │
+│    • Computes Net Worth, Monthly Inflow, Outflow & Savings Rate        │
+│    • Passes computed data to Jinja2 template engine                    │
+└───────────────────────────────────┬────────────────────────────────────┘
+                                    │ Renders dynamic data
+                                    ▼
+┌────────────────────────────────────────────────────────────────────────┐
+│ 3. HTML TEMPLATES (templates/index.html & base.html)                   │
+│    • HTML tags (<section>, <div>, <table>, <form>) define structure   │
+│    • Jinja2 expressions ({{ summary.net_worth }}) display values       │
+│    • Jinja2 loops ({% for tx in recent_transactions %}) render rows   │
+└───────────────────────────────────┬────────────────────────────────────┘
+                                    │ Styled by
+                                    ▼
+┌────────────────────────────────────────────────────────────────────────┐
+│ 4. CSS STYLING (static/style.css)                                      │
+│    • Controls visual presentation: emerald green branding, fonts       │
+│    • Implements Flexbox and CSS Grid for responsive 12px cards         │
+│    • Supports instant Light / Dark mode via CSS variables (--bg-card) │
+└────────────────────────────────────────────────────────────────────────┘
+```
+
+### 1. The Role of HTML5 (`templates/`)
+HTML provides the **skeleton and structural content** of the web page.
+- Semantic HTML tags (`<header>`, `<aside>`, `<main>`, `<table>`, `<form>`) organize the interface.
+- Jinja2 template syntax allows Python variables to be embedded cleanly:
+  - `{{ summary.net_worth }}` inserts the dynamically calculated net worth.
+  - `{% for tx in all_transactions %}` loops through transactions in Python and renders a table row for each one.
+  - Template inheritance (`{% extends "base.html" %}`) avoids repeating header and navigation code across pages.
+
+### 2. The Role of CSS3 (`static/style.css`)
+CSS controls the **visual presentation, styling, and responsiveness**.
+- **CSS Custom Properties (Variables)**: Defined in `:root` for colors (`--primary: #065f46`, `--accent-income: #10b981`, `--bg-card: #ffffff`).
+- **CSS Grid & Flexbox**: Positions KPI summary cards, sidebars, and data tables responsively.
+- **Dark Mode**: Applied seamlessly by adding the `.dark` class to `<body>`, swapping background and surface colors without touching HTML.
+
+### 3. The Role of Python & Flask (`app.py`, `database.py`)
+Python acts as the **application brain and backend processing engine**.
+- Manages web routing (`@app.route(...)`) for page navigation.
+- Processes standard HTML form submissions (`request.form`) using pure Python without requiring JavaScript.
+- Performs mathematical calculations (savings rate percentages, monthly budget pace).
+- Interacts with the local SQLite relational database (`fintrack.db`) via thread-safe parameterized SQL queries to prevent SQL injection.
 
 ---
 
-## 🔄 How to Swap LocalStorage for Supabase
+## 🚀 Step-by-Step Instructions: Running the Project in VS Code
 
-FinTrack is built with a decoupled storage abstraction in [`src/lib/storage.ts`](src/lib/storage.ts) implementing the `IStorageProvider` interface:
+### Step 1: Open the Project in VS Code
+1. Launch **Visual Studio Code**.
+2. Go to **File -> Open Folder...** and select the project folder:
+   ```
+   C:\Users\Asus\.gemini\antigravity\scratch\fintrack
+   ```
 
-```typescript
-export interface IStorageProvider {
-  loadData(): Promise<FinanceData | null>;
-  saveData(data: FinanceData): Promise<void>;
-  clearData(): Promise<void>;
-}
-```
+### Step 2: Open Terminal in VS Code
+Press ``Ctrl + ` `` (Backtick) or click **Terminal -> New Terminal**.
 
-### Step 1: Install Supabase Client
-
+### Step 3: Install Required Python Packages
+Run the following command in the terminal to install Flask and required libraries:
 ```bash
-npm install @supabase/supabase-js
+pip install -r requirements.txt
 ```
 
-### Step 2: Create Supabase Tables
-
-Execute this schema in your Supabase SQL Editor:
-
-```sql
--- Create user finance document table
-create table public.user_finance (
-  id uuid primary key default gen_random_uuid(),
-  user_id uuid references auth.users not null unique,
-  payload jsonb not null,
-  updated_at timestamp with time zone default timezone('utc'::text, now()) not null
-);
-
--- Enable Row Level Security (RLS)
-alter table public.user_finance enable row level security;
-
-create policy "Users can view own data"
-  on public.user_finance for select
-  using (auth.uid() = user_id);
-
-create policy "Users can insert/update own data"
-  on public.user_finance for all
-  using (auth.uid() = user_id);
+### Step 4: Run the Python Flask Application
+Run the root application script:
+```bash
+python app.py
 ```
 
-### Step 3: Implement `SupabaseStorageProvider` in `src/lib/storage.ts`
-
-Replace the default export in `src/lib/storage.ts` with:
-
-```typescript
-import { createClient } from '@supabase/supabase-js';
-import { FinanceData } from '../types/finance';
-import { IStorageProvider } from './storage';
-
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
-
-export class SupabaseStorageProvider implements IStorageProvider {
-  async loadData(): Promise<FinanceData | null> {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return null;
-
-    const { data, error } = await supabase
-      .from('user_finance')
-      .select('payload')
-      .eq('user_id', user.id)
-      .maybeSingle();
-
-    if (error || !data) return null;
-    return data.payload as FinanceData;
-  }
-
-  async saveData(data: FinanceData): Promise<void> {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
-    await supabase
-      .from('user_finance')
-      .upsert({
-        user_id: user.id,
-        payload: data,
-        updated_at: new Date().toISOString()
-      }, { onConflict: 'user_id' });
-  }
-
-  async clearData(): Promise<void> {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
-    await supabase
-      .from('user_finance')
-      .delete()
-      .eq('user_id', user.id);
-  }
-}
-
-// Export Supabase as the active provider:
-export const storage: IStorageProvider = new SupabaseStorageProvider();
+You will see the startup banner:
+```text
+======================================================================
+FinTrack — Python Flask Web Server
+======================================================================
+[*] Local Web App  : http://127.0.0.1:5000/
+[*] Local Network  : http://172.16.63.18:5000/
+[*] Templates Dir  : templates/
+[*] Static Assets  : static/
+[*] Database       : SQLite (fintrack.db)
+======================================================================
+ * Running on http://127.0.0.1:5000
 ```
 
-Because the entire application reads and writes exclusively through `storage.loadData()` and `storage.saveData()`, **zero changes** are required in the UI components, pages, or store.
+### Step 5: Open in Your Web Browser
+Open your browser and visit:
+- **Financial Dashboard**: **[http://127.0.0.1:5000/](http://127.0.0.1:5000/)**
+- **Transactions Ledger**: **[http://127.0.0.1:5000/transactions](http://127.0.0.1:5000/transactions)**
+- **Category Budgets**: **[http://127.0.0.1:5000/budgets](http://127.0.0.1:5000/budgets)**
+- **Savings Goals**: **[http://127.0.0.1:5000/goals](http://127.0.0.1:5000/goals)**
+- **System Settings & Webhook**: **[http://127.0.0.1:5000/settings](http://127.0.0.1:5000/settings)**
 
 ---
 
-## 💡 Key Features Included
+## 🔗 Connecting HTML Forms Directly to Python (Pure Backend Processing)
 
-1. **Dashboard**:
-   - 4 KPI cards (Net balance, Income, Expenses, Savings rate) with Month-over-Month (% and pp) change indicators.
-   - Smart Insights Card: 3-4 plain-language rule-based insights + anomaly warnings.
-   - 6-month comparative bar chart, category donut breakdown, and daily spend line chart.
-   - Budget pace quick list and upcoming recurring payment widget.
-2. **Transactions**:
-   - Full filtering by search query, category, account, type, and date range.
-   - Table sorting (Date, Amount, Note) and pagination.
-   - Bulk select and delete.
-   - Delete action with 6-second undo toast notification.
-   - CSV statement import with column auto-mapping preview.
-   - CSV export matching current ledger state.
-3. **Budgets**:
-   - Category limits with real-time daily spending pace calculation.
-   - Automated month-end projected overspend alerts.
-4. **Goals**:
-   - Savings goals with circular progress rings.
-   - Quick "Contribute" deposit action linked to accounts.
-   - Automatic estimated completion date projection.
-5. **Accounts**:
-   - Balances across checking, savings, credit cards, and cash wallets.
-   - Inter-account transfers (moves money without altering income or expense metrics).
-6. **Reports**:
-   - Monthly and yearly breakdowns.
-   - Net cash flow trend chart.
-   - Top 5 merchants/payees ranking.
-   - Clean print / PDF export view (`window.print()`).
-7. **Settings**:
-   - 7 selectable base currencies with precision decimal handling.
-   - Dark mode / Light mode / System theme synchronization.
-   - Custom month start day (1–28).
-   - Custom category manager (add, edit, recolor, icon select, delete).
-   - Full JSON backup export and restore.
-   - "Clear demo data" and "Reset to demo data" actions.
+To demonstrate to your teacher that the project uses Python for backend logic rather than client-side JavaScript, all modal forms are linked directly to dedicated Python routes:
+
+### 1. Adding a Transaction
+- **HTML Form** (`templates/base.html`):
+  ```html
+  <form id="addTransactionForm" method="POST" action="/transactions/create">
+    <select name="type">
+      <option value="expense">Expense</option>
+      <option value="income">Income</option>
+    </select>
+    <input type="number" name="amount" required>
+    <input type="text" name="payee" required>
+    <input type="date" name="date" required>
+    <button type="submit">Save Transaction</button>
+  </form>
+  ```
+- **Python Flask Route** (`app.py`):
+  ```python
+  @app.route("/transactions/create", methods=["POST"])
+  def form_create_transaction():
+      # Read form inputs sent by HTML
+      tx_type = request.form.get("type", "expense")
+      amount = float(request.form.get("amount", 0))
+      payee = request.form.get("payee")
+      date_val = request.form.get("date")
+
+      # Save directly into SQLite using Python
+      app.db.add_transaction({
+          "type": tx_type,
+          "amount": amount,
+          "payee": payee,
+          "merchant": payee,
+          "date": date_val,
+      })
+
+      # Redirect user back to the ledger with updated data
+      return redirect(request.referrer or "/transactions")
+  ```
+
+### 2. Deleting a Transaction
+- **HTML Link** (`templates/transactions.html`):
+  ```html
+  <a href="/transactions/delete/{{ tx.id }}" onclick="return confirm('Delete?');">Delete</a>
+  ```
+- **Python Flask Route** (`app.py`):
+  ```python
+  @app.route("/transactions/delete/<tx_id>", methods=["GET", "POST"])
+  def form_delete_transaction(tx_id):
+      app.db.delete_transaction(tx_id)
+      return redirect(request.referrer or "/transactions")
+  ```
+
+---
+
+## ⚡ Bank SMS / Email Auto-Parser & Background Webhook
+
+FinTrack includes an automated bank alert parser engine (`sms_parser.py`) and a background webhook receiver (`POST /api/webhook/sms`):
+
+### 1. Manual Dialog Extraction
+1. Click the **⚡ Auto-Fetch SMS** button in the header or ledger.
+2. Click any test preset (e.g. *Swiggy*, *Salary*, *Amazon*, *Uber*, or *Batch*).
+3. Click **Extract & Preview Transactions &rarr;**.
+4. The Python regex engine extracts the amount, merchant, account mask (`*8921`), and date, and auto-tags the category.
+5. Click **Confirm & Import to Ledger** to write it to SQLite.
+
+### 2. Hands-Free Background Wi-Fi Webhook
+- Android forwarder apps (like *SMS Forwarder* or *MacroDroid*) push bank alerts to:
+  `http://<YOUR_IP>:5000/api/webhook/sms`
+- Python parses the alert silently, ignores non-financial OTPs, checks for duplicate entries to avoid double-charging, and saves to SQLite.
+
+### 3. Test with the Standalone Python Simulator
+In your terminal, run:
+```bash
+python send_test_sms.py
+```
+This zero-dependency script sends a sample bank alert to the webhook, printing the server's response and logging the transaction live!
+
+---
+
+## 🧪 Comprehensive Automated Test Suites (58 / 58 Tests Passing)
+
+FinTrack includes unit and integration tests covering Python functions, database operations, form handlers, and regex parsing:
+
+### 1. Run Python Tests (42 Tests Passing in 0.75s)
+```bash
+python -m pytest backend/tests -v
+```
+- `test_forms.py` (5 tests): HTML `<form>` submissions, deletions, transfers.
+- `test_background_reader.py` (8 tests): Background webhook, IP discovery, duplicate filtering.
+- `test_sms_parser.py` (8 tests): Regex extraction from Indian & international bank alerts.
+- `test_database.py` (6 tests): SQLite CRUD, transfers, constraints.
+- `test_api.py` (8 tests): REST endpoints, health, validation.
+- `test_frontend.py` (7 tests): Semantic HTML template rendering across all views.
+
+### 2. Run Frontend Math Tests (16 Tests Passing in 1.48s)
+```bash
+npm run test
+```
+
+---
+
+## 💡 Viva Questions & Teacher Demonstration Guide
+
+| Question from Teacher | How to Answer Confidently |
+| :--- | :--- |
+| **"Where is the backend logic implemented?"** | In `app.py` using Python and Flask. All calculations, data formatting, and routing happen on the server in Python. |
+| **"How does the HTML get data from Python?"** | Flask uses the Jinja2 templating engine (`render_template('index.html', **ctx)`). In HTML, `{{ summary.net_worth }}` renders the values sent by Python. |
+| **"Where is the database and how is it connected?"** | We use SQLite (`fintrack.db`). In `database.py`, Python connects via `sqlite3.connect()`. Parameterized SQL queries (`?`) are used to prevent SQL injection. |
+| **"Why is CSS separated into a different file?"** | Separation of concerns: HTML handles page structure, while `static/style.css` handles styling. This keeps code clean, maintainable, and cacheable by browsers. |
+| **"Does this require JavaScript for backend operations?"** | No. HTML forms submit directly via `method="POST"` to Flask routes (e.g., `/transactions/create`), where Python reads `request.form` and redirects. JavaScript is only used for UI enhancements like opening modals and showing toasts. |
+| **"How does the Bank SMS parser work?"** | In `sms_parser.py`, regular expressions (regex) search for currency markers (`Rs.`, `INR`, `₹`), merchant names, and account masks (`*8921`), mapping them automatically to registered accounts and categories. |

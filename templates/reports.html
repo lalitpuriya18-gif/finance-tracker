@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+
+{% block title %}FinTrack — Financial Reports & Analytics{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+  <div>
+    <h1 style="font-size: 1.75rem; font-weight: 700; margin-bottom: 0.25rem;">Executive Financial Reports</h1>
+    <p style="color: var(--text-muted); font-size: 0.95rem;">
+      In-depth cashflow analytics, category spending distribution, and savings velocity metrics.
+    </p>
+  </div>
+  <button class="btn btn-primary" onclick="window.print()">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <polyline points="6 9 6 2 18 2 18 9"></polyline>
+      <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+      <rect width="12" height="8" x="6" y="14"></rect>
+    </svg>
+    <span>Download / Print PDF</span>
+  </button>
+</div>
+
+<!-- ========================================================================
+     EXECUTIVE SUMMARY METRICS
+     ======================================================================== -->
+<section class="kpi-grid">
+  <div class="kpi-card">
+    <div class="kpi-label">Cumulative Inflow</div>
+    <div class="kpi-value income">+₹{{ "{:,.2f}".format(summary.monthly_income) }}</div>
+    <div class="kpi-footer">Total deposits recorded</div>
+  </div>
+
+  <div class="kpi-card">
+    <div class="kpi-label">Cumulative Outflow</div>
+    <div class="kpi-value expense">-₹{{ "{:,.2f}".format(summary.monthly_expense) }}</div>
+    <div class="kpi-footer">Total operational expenditures</div>
+  </div>
+
+  <div class="kpi-card">
+    <div class="kpi-label">Net Surplus / Savings</div>
+    <div class="kpi-value" style="color: {% if summary.net_savings >= 0 %}var(--accent-income){% else %}var(--accent-expense){% endif %};">
+      {% if summary.net_savings >= 0 %}+{% endif %}₹{{ "{:,.2f}".format(summary.net_savings) }}
+    </div>
+    <div class="kpi-footer">Retained liquidity this cycle</div>
+  </div>
+
+  <div class="kpi-card">
+    <div class="kpi-label">Savings Velocity</div>
+    <div class="kpi-value">{{ summary.savings_rate }}%</div>
+    <div class="kpi-footer">Income retained as savings</div>
+  </div>
+</section>
+
+<!-- ========================================================================
+     CATEGORY SPENDING DISTRIBUTION
+     ======================================================================== -->
+<div class="card" style="padding: 0; margin-bottom: 2rem;">
+  <div style="padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+    <h2 class="card-title">Category Spending Distribution</h2>
+    <span class="badge badge-info">Oct 2023 Ledger</span>
+  </div>
+
+  <div class="table-responsive">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Category</th>
+          <th>Transactions</th>
+          <th style="width: 35%;">Spending Ratio</th>
+          <th style="text-align: right;">Total Spent (INR)</th>
+          <th style="text-align: right;">Share of Outflow</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for cat in category_breakdown %}
+          <tr>
+            <td style="font-weight: 600;">{{ cat.name }}</td>
+            <td style="color: var(--text-muted);">{{ cat.count }} transactions</td>
+            <td>
+              <div class="progress-bar-container" style="margin: 0;">
+                <div class="progress-bar-fill progress-success" style="width: {{ cat.percentage }}%;"></div>
+              </div>
+            </td>
+            <td style="text-align: right; font-weight: 600;" class="amount-expense">
+              ₹{{ "{:,.2f}".format(cat.amount) }}
+            </td>
+            <td style="text-align: right; color: var(--text-muted); font-size: 0.85rem;">
+              {{ cat.percentage }}%
+            </td>
+          </tr>
+        {% else %}
+          <tr>
+            <td colspan="5" style="text-align: center; color: var(--text-muted); padding: 2rem;">
+              No expense categories recorded yet.
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ========================================================================
+     ANALYTIC INSIGHTS
+     ======================================================================== -->
+<h2 style="font-size: 1.25rem; font-weight: 600; margin-bottom: 1rem;">Automated Financial Insights</h2>
+
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.25rem;">
+  <div class="card" style="border-left: 4px solid var(--accent-income);">
+    <h3 style="font-size: 1rem; font-weight: 600; margin-bottom: 0.25rem;">Savings Target on Schedule</h3>
+    <p style="color: var(--text-muted); font-size: 0.875rem;">
+      Your monthly savings velocity is at <strong>{{ summary.savings_rate }}%</strong>, exceeding the recommended 20% benchmark.
+    </p>
+  </div>
+
+  <div class="card" style="border-left: 4px solid var(--accent-warning);">
+    <h3 style="font-size: 1rem; font-weight: 600; margin-bottom: 0.25rem;">Top Expenditure Focus</h3>
+    <p style="color: var(--text-muted); font-size: 0.875rem;">
+      {% if category_breakdown %}
+        <strong>{{ category_breakdown[0].name }}</strong> constitutes the largest expense proportion at {{ category_breakdown[0].percentage }}% of all debits.
+      {% else %}
+        Keep recording daily expenses to identify top expenditure drivers.
+      {% endif %}
+    </p>
+  </div>
+</div>
+{% endblock %}
