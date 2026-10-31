@@ -11,6 +11,7 @@ Run this in your terminal:
 ==============================================================================
 """
 
+import os
 import json
 import sys
 import urllib.request
@@ -22,8 +23,10 @@ DEFAULT_SMS = (
     "UPI Ref 329012345678. Not you? Call 18002583838."
 )
 
+DEFAULT_URL = f"{os.environ.get('BACKEND_URL', 'http://127.0.0.1:5000').rstrip('/')}/api/webhook/sms"
 
-def send_test_sms(url: str = "http://127.0.0.1:5000/api/webhook/sms", sms_text: str = DEFAULT_SMS):
+
+def send_test_sms(url: str = DEFAULT_URL, sms_text: str = DEFAULT_SMS):
     print("=" * 70)
     print("FinTrack — Background SMS Webhook Simulator")
     print("=" * 70)
@@ -68,6 +71,6 @@ def send_test_sms(url: str = "http://127.0.0.1:5000/api/webhook/sms", sms_text: 
 
 
 if __name__ == "__main__":
-    target_url = sys.argv[1] if len(sys.argv) > 1 else "http://127.0.0.1:5000/api/webhook/sms"
+    target_url = sys.argv[1] if len(sys.argv) > 1 else DEFAULT_URL
     sample_text = sys.argv[2] if len(sys.argv) > 2 else DEFAULT_SMS
     send_test_sms(target_url, sample_text)

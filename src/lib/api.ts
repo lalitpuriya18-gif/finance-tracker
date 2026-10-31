@@ -9,7 +9,19 @@ import {
   Settings,
 } from '../types/finance';
 
-const BASE_URL = '/api';
+// Resolves backend base URL: supports Vercel service binding, env override, or standard /api routing
+const getBaseUrl = (): string => {
+  if (typeof process !== 'undefined' && process.env?.BACKEND_URL) {
+    return `${process.env.BACKEND_URL.replace(/\/$/, '')}/api`;
+  }
+  const envBackendUrl = (import.meta as any).env?.VITE_BACKEND_URL;
+  if (envBackendUrl) {
+    return `${envBackendUrl.replace(/\/$/, '')}/api`;
+  }
+  return '/api';
+};
+
+const BASE_URL = getBaseUrl();
 
 async function request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const url = `${BASE_URL}${endpoint}`;
