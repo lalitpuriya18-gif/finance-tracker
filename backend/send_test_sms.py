@@ -47,11 +47,11 @@ def send_test_sms(url: str = "http://127.0.0.1:5000/api/webhook/sms", sms_text: 
             status_code = response.getcode()
             response_body = response.read().decode("utf-8")
             result = json.loads(response_body)
-            print(f"[+] Success! Server HTTP {status_code}")
+            print(f"[OK] Success! Server HTTP {status_code}")
             print(f"[*] Response:\n{json.dumps(result, indent=2)}")
             print("-" * 70)
             if result.get("status") == "recorded":
-                print("[+] Transaction successfully captured and logged into SQLite ledger!")
+                print("[OK] Transaction successfully captured and logged into SQLite ledger!")
             elif result.get("status") == "duplicate":
                 print("[!] Transaction was already logged in SQLite (duplicate ignored).")
             else:
