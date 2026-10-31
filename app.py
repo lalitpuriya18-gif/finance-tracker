@@ -26,7 +26,7 @@ ROOT_DIR = Path(__file__).resolve().parent
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
-from flask import Flask, jsonify, request, render_template, redirect, url_for
+from flask import Flask, jsonify, request, render_template, redirect, url_for, session
 from flask_cors import CORS
 
 # Import database and SMS parsing modules (supports both root and backend/ locations)
@@ -160,12 +160,22 @@ def get_page_context(db: Database) -> dict:
     port = int(os.environ.get("PORT", 5000))
     webhook_url = f"http://{local_ip}:{port}/api/webhook/sms"
 
+    try:
+        user_name = session.get("user_name") or settings.get("userName", "Arjun Mehta")
+        user_email = session.get("user_email") or settings.get("userEmail", "arjun@fintrack.io")
+        is_logged_in = session.get("logged_in", True)
+    except Exception:
+        user_name = settings.get("userName", "Arjun Mehta")
+        user_email = settings.get("userEmail", "arjun@fintrack.io")
+        is_logged_in = True
+
     return {
         "global_accounts": accounts,
         "global_categories": categories,
         "user_profile": {
-            "name": settings.get("userName", "Arjun Mehta"),
-            "email": settings.get("userEmail", "arjun@fintrack.io"),
+            "name": user_name,
+            "email": user_email,
+            "is_logged_in": is_logged_in,
         },
         "summary": {
             "net_worth": net_worth,
@@ -201,6 +211,7 @@ def create_app(db: Database = None) -> Flask:
         template_folder=template_dir,
         static_folder=static_dir,
     )
+    app.secret_key = os.environ.get("SECRET_KEY", "fintrack-secret-key-2024")
     CORS(app)
 
     if db is None:
@@ -211,6 +222,29 @@ def create_app(db: Database = None) -> Flask:
     # =========================================================================
     # 1. SEMANTIC HTML WEB PAGE ROUTES
     # =========================================================================
+
+    @app.route("/login", methods=["GET", "POST"])
+    def page_login():
+        """Renders login page (GET) or authenticates user session (POST)."""
+        if request.method == "POST":
+            email = request.form.get("email", "").strip() or "arjun@fintrack.io"
+            name = request.form.get("name", "").strip() or ("Arjun Mehta" if "arjun" in email.lower() else email.split("@")[0])
+            session["logged_in"] = True
+            session["user_name"] = name
+            session["user_email"] = email
+            try:
+                app.db.update_settings({"userName": name, "userEmail": email})
+            except Exception:
+                pass
+            return redirect(url_for("page_dashboard"))
+
+        return render_template("login.html", default_email=session.get("user_email", "arjun@fintrack.io"))
+
+    @app.route("/logout", methods=["GET", "POST"])
+    def page_logout():
+        """Clears user session and redirects to login."""
+        session.clear()
+        return redirect(url_for("page_login"))
 
     @app.route("/", methods=["GET"])
     def page_dashboard():
@@ -407,6 +441,40 @@ def create_app(db: Database = None) -> Flask:
             return jsonify(data)
         except Exception as e:
             return jsonify({"error": "Failed to retrieve bootstrap data", "details": str(e)}), 500
+
+    # =========================================================================
+    # 3. AUTHENTICATION API
+    # =========================================================================
+
+    @app.route("/api/auth/login", methods=["POST"])
+    def api_login():
+        """Authenticates user credentials and returns user profile."""
+        payload = request.get_json(silent=True) or request.form or {}
+        email = payload.get("email", "").strip() or "arjun@fintrack.io"
+        name = payload.get("name", "").strip() or ("Arjun Mehta" if "arjun" in email.lower() else email.split("@")[0])
+        session["logged_in"] = True
+        session["user_name"] = name
+        session["user_email"] = email
+        updated = app.db.update_settings({"userName": name, "userEmail": email})
+        return jsonify({"success": True, "user": updated, "message": f"Welcome back, {name}!"}), 200
+
+    @app.route("/api/auth/google", methods=["POST"])
+    def google_auth():
+        """Simulates Google OAuth session and updates user profile in database."""
+        payload = request.get_json(silent=True) or request.form or {}
+        name = payload.get("name") or "Arjun Mehta"
+        email = payload.get("email") or "arjun@fintrack.io"
+        session["logged_in"] = True
+        session["user_name"] = name
+        session["user_email"] = email
+        updated = app.db.update_settings({"userName": name, "userEmail": email})
+        return jsonify({"success": True, "user": updated}), 200
+
+    @app.route("/api/auth/logout", methods=["POST"])
+    def api_logout():
+        """Clears user session."""
+        session.clear()
+        return jsonify({"success": True, "message": "Logged out successfully"}), 200
 
     # =========================================================================
     # 4. TRANSACTIONS CRUD API

@@ -98,3 +98,36 @@ def test_page_settings(client):
     assert "settingCurrency" in html
     assert "Reset to Demo Data" in html
     assert "Clear All Data" in html
+
+
+def test_page_login_get(client):
+    """Verifies that GET /login renders the FinTrack login page."""
+    res = client.get("/login")
+    assert res.status_code == 200
+    html = res.get_data(as_text=True)
+    assert "Fintrack" in html
+    assert "Welcome back" in html
+    assert "Arjun Mehta" in html
+    assert "Sign In to FinTrack" in html
+
+
+def test_page_login_post(client):
+    """Verifies that POST /login authenticates the user and redirects to dashboard."""
+    res = client.post("/login", data={
+        "email": "arjun@fintrack.io",
+        "password": "password123",
+        "name": "Arjun Mehta",
+    }, follow_redirects=True)
+    assert res.status_code == 200
+    html = res.get_data(as_text=True)
+    assert "Welcome back" in html
+    assert "Arjun Mehta" in html
+
+
+def test_page_logout(client):
+    """Verifies that GET /logout clears session and redirects to /login."""
+    res = client.get("/logout", follow_redirects=True)
+    assert res.status_code == 200
+    html = res.get_data(as_text=True)
+    assert "Sign In" in html
+

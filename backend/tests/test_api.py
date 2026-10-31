@@ -153,3 +153,30 @@ def test_settings_and_sync_api(client):
     sync_res = client.post("/api/sync")
     assert sync_res.status_code == 200
     assert sync_res.get_json()["status"] == "success"
+
+
+def test_auth_api(client):
+    # Login via API
+    login_res = client.post("/api/auth/login", json={
+        "email": "arjun@fintrack.io",
+        "name": "Arjun Mehta",
+    })
+    assert login_res.status_code == 200
+    data = login_res.get_json()
+    assert data["success"] is True
+    assert data["user"]["userName"] == "Arjun Mehta"
+    assert data["user"]["userEmail"] == "arjun@fintrack.io"
+
+    # Google Auth simulation
+    google_res = client.post("/api/auth/google", json={
+        "name": "Arjun Google",
+        "email": "arjun.g@gmail.com",
+    })
+    assert google_res.status_code == 200
+    assert google_res.get_json()["user"]["userName"] == "Arjun Google"
+
+    # Logout
+    logout_res = client.post("/api/auth/logout")
+    assert logout_res.status_code == 200
+    assert logout_res.get_json()["success"] is True
+

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutGrid,
   ArrowLeftRight,
@@ -10,6 +10,8 @@ import {
   Sun,
   Moon,
   MoreVertical,
+  LogOut,
+  LogIn,
 } from 'lucide-react';
 import { useFinanceStore } from '../../store/useFinanceStore';
 
@@ -18,7 +20,8 @@ interface SidebarProps {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ isMobile }) => {
-  const { settings, updateSettings } = useFinanceStore();
+  const { settings, updateSettings, isAuthenticated, logout } = useFinanceStore();
+  const navigate = useNavigate();
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
 
   const navLinks = [
@@ -172,6 +175,30 @@ export const Sidebar: React.FC<SidebarProps> = ({ isMobile }) => {
                 <LayoutGrid className="w-3.5 h-3.5 text-slate-500" />
                 <span>Bank & Card Accounts</span>
               </NavLink>
+              <div className="border-t border-slate-100 dark:border-slate-700 my-1"></div>
+              {isAuthenticated ? (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    setIsUserMenuOpen(false);
+                    await logout();
+                    navigate('/login');
+                  }}
+                  className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-left font-medium transition-colors"
+                >
+                  <LogOut className="w-3.5 h-3.5 text-rose-500" />
+                  <span>Sign Out</span>
+                </button>
+              ) : (
+                <NavLink
+                  to="/login"
+                  onClick={() => setIsUserMenuOpen(false)}
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 font-medium transition-colors"
+                >
+                  <LogIn className="w-3.5 h-3.5 text-emerald-500" />
+                  <span>Sign In</span>
+                </NavLink>
+              )}
             </div>
           )}
         </div>

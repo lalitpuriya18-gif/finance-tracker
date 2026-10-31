@@ -46,6 +46,11 @@ export const api = {
   getBootstrap: () => request<FinanceData & { notifications?: any[] }>('/bootstrap'),
 
   // Auth
+  login: (email: string, password?: string, name?: string) =>
+    request<{ success: boolean; user: Settings }>('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password, name }),
+    }),
   googleAuth: (name?: string, email?: string) =>
     request<{ success: boolean; user: Settings }>('/auth/google', {
       method: 'POST',

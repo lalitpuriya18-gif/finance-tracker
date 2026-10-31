@@ -95,6 +95,11 @@ interface FinanceState extends FinanceData {
   setSort: (field: 'date' | 'amount' | 'note', order: 'asc' | 'desc') => void;
   resetFilters: () => void;
 
+  // Auth
+  isAuthenticated: boolean;
+  login: (email: string, password?: string, name?: string) => Promise<boolean>;
+  logout: () => Promise<void>;
+
   // Maintenance & Backup
   deleteData: () => Promise<void>;
   clearDemoData: () => Promise<void>;
@@ -118,6 +123,7 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
     userEmail: 'user@fintrack.io',
   },
   isLoading: true,
+  isAuthenticated: typeof localStorage !== 'undefined' ? (localStorage.getItem('fintrack_auth') === 'false' ? false : true) : true,
   toasts: [],
 
   // Filter defaults
@@ -615,5 +621,52 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
       description: 'Your financial data backup was successfully imported.',
       type: 'success',
     });
+  },
+
+  login: async (email: string, password?: string, name?: string) => {
+    const defaultName = email.toLowerCase().includes('arjun') ? 'Arjun Mehta' : email.split('@')[0];
+    const userName = name || defaultName;
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('fintrack_auth', 'true');
+    }
+    const currentSettings = get().settings;
+    const newSettings = {
+      ...currentSettings,
+      userName,
+      userEmail: email,
+    };
+    set({
+      isAuthenticated: true,
+      settings: newSettings,
+    });
+    await get().saveToStorage();
+    get().addToast({
+      title: 'Signed In Successfully',
+      description: `Welcome back, ${userName}!`,
+      type: 'success',
+    });
+    try {
+      await api.login(email, password, userName);
+    } catch {
+      // offline / mock fallback safe
+    }
+    return true;
+  },
+
+  logout: async () => {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('fintrack_auth', 'false');
+    }
+    set({ isAuthenticated: false });
+    get().addToast({
+      title: 'Signed Out',
+      description: 'You have been logged out of FinTrack.',
+      type: 'info',
+    });
+    try {
+      await api.logout();
+    } catch {
+      // offline safe
+    }
   },
 }));
