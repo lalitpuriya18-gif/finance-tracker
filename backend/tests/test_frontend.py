@@ -131,3 +131,43 @@ def test_page_logout(client):
     html = res.get_data(as_text=True)
     assert "Sign In" in html
 
+
+def test_page_quick_login_lalit(client):
+    """Verifies one-click demo login as Lalit Puriya."""
+    res = client.post("/quick-login", follow_redirects=True)
+    assert res.status_code == 200
+    html = res.get_data(as_text=True)
+    assert "Lalit Puriya" in html
+
+
+def test_page_register_and_forgot_password(client):
+    """Verifies account creation and password recovery through pure HTML forms."""
+    # Register
+    reg_res = client.post("/register", data={
+        "name": "Sameer Joshi",
+        "email": "sameer@domain.com",
+        "password": "secretPassword1",
+    }, follow_redirects=True)
+    assert reg_res.status_code == 200
+    assert "Sameer Joshi" in reg_res.get_data(as_text=True)
+
+    # Logout
+    client.get("/logout")
+
+    # Reset password
+    reset_res = client.post("/forgot-password", data={
+        "email": "sameer@domain.com",
+        "new_password": "newPassword99",
+    })
+    assert reset_res.status_code == 200
+    assert "Password for sameer@domain.com reset successfully" in reset_res.get_data(as_text=True)
+
+    # Login with new password
+    login_res = client.post("/login", data={
+        "email": "sameer@domain.com",
+        "password": "newPassword99",
+    }, follow_redirects=True)
+    assert login_res.status_code == 200
+    assert "Sameer Joshi" in login_res.get_data(as_text=True)
+
+

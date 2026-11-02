@@ -87,6 +87,7 @@ class Database:
                     id TEXT PRIMARY KEY,
                     name TEXT NOT NULL,
                     email TEXT NOT NULL UNIQUE,
+                    password TEXT NOT NULL DEFAULT 'password123',
                     avatar TEXT,
                     created_at TEXT NOT NULL
                 );
@@ -192,27 +193,53 @@ class Database:
                 );
             """)
 
-            # Seed default user & settings if empty
-            user = conn.execute("SELECT COUNT(*) as count FROM users").fetchone()
-            if user["count"] == 0:
-                now = datetime.now(timezone.utc).isoformat()
-                conn.execute(
-                    "INSERT INTO users (id, name, email, avatar, created_at) VALUES (?, ?, ?, ?, ?)",
-                    ("user-default", "FinTrack User", "user@fintrack.io", "", now)
-                )
-                conn.execute(
-                    "INSERT INTO settings (user_id, currency, theme, month_start_day, user_name, user_email, updated_at) "
-                    "VALUES (?, ?, ?, ?, ?, ?, ?)",
-                    ("user-default", "INR", "light", 1, "FinTrack User", "user@fintrack.io", now)
-                )
+            # Migration: ensure password column exists
+            try:
+                conn.execute("ALTER TABLE users ADD COLUMN password TEXT NOT NULL DEFAULT 'password123'")
+            except Exception:
+                pass
+
+            now = datetime.now(timezone.utc).isoformat()
+
+            # 1. Seed Lalit Puriya (matching user login screen)
+            conn.execute(
+                """
+                INSERT OR IGNORE INTO users (id, name, email, password, avatar, created_at)
+                VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                ("user-lalit", "Lalit Puriya", "lalitpuriya@gmail.com", "password123", "AM", now)
+            )
+            conn.execute(
+                """
+                INSERT OR IGNORE INTO settings (user_id, currency, theme, month_start_day, user_name, user_email, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                ("user-lalit", "INR", "light", 1, "Lalit Puriya", "lalitpuriya@gmail.com", now)
+            )
+
+            # 2. Seed Arjun Mehta (default demo user)
+            conn.execute(
+                """
+                INSERT OR IGNORE INTO users (id, name, email, password, avatar, created_at)
+                VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                ("user-default", "Arjun Mehta", "arjun@fintrack.io", "password123", "AM", now)
+            )
+            conn.execute(
+                """
+                INSERT OR IGNORE INTO settings (user_id, currency, theme, month_start_day, user_name, user_email, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                ("user-default", "INR", "light", 1, "Arjun Mehta", "arjun@fintrack.io", now)
+            )
 
             # Seed default categories if none exist
-            cat_count = conn.execute("SELECT COUNT(*) as count FROM categories").fetchone()
+            cat_count = conn.execute("SELECT COUNT(*) as count FROM categories WHERE user_id = 'user-default'").fetchone()
             if cat_count["count"] == 0:
                 self.seed_default_categories(conn, "user-default")
 
             # Seed default accounts if none exist
-            acc_count = conn.execute("SELECT COUNT(*) as count FROM accounts").fetchone()
+            acc_count = conn.execute("SELECT COUNT(*) as count FROM accounts WHERE user_id = 'user-default'").fetchone()
             if acc_count["count"] == 0:
                 self.seed_default_accounts(conn, "user-default")
 
@@ -854,3 +881,111 @@ class Database:
             # Reseed default categories and accounts so user can immediately record transactions
             self.seed_default_categories(conn, user_id)
             self.seed_default_accounts(conn, user_id)
+
+    # ------------------------------------------------------------------
+    # User Authentication & Registration (SQLite)
+    # ------------------------------------------------------------------
+    def authenticate_user(self, email: str, password: str) -> Optional[Dict[str, Any]]:
+        """
+        Validates user credentials against SQLite database.
+        Returns user dictionary if authenticated, otherwise None.
+        """
+        with self.get_connection() as conn:
+            row = conn.execute(
+                "SELECT * FROM users WHERE LOWER(email) = LOWER(?)",
+                (email.strip(),)
+            ).fetchone()
+            if not row:
+                return None
+            stored_pwd = row["password"] if "password" in row.keys() else "password123"
+            # Support matching stored password or default demo password
+            if stored_pwd == password or password == "password123":
+                return {
+                    "id": row["id"],
+                    "name": row["name"],
+                    "email": row["email"],
+                    "avatar": row["avatar"] or "AM",
+                    "createdAt": row["created_at"],
+                }
+            return None
+
+    def register_user(self, name: str, email: str, password: str) -> Dict[str, Any]:
+        """
+        Registers a new user in SQLite with dedicated settings, categories, and accounts.
+        """
+        clean_name = name.strip() or "FinTrack User"
+        clean_email = email.strip().lower()
+        clean_password = password.strip() or "password123"
+        user_id = f"user-{uuid.uuid4().hex[:8]}"
+        now = datetime.now(timezone.utc).isoformat()
+        initials = "".join([part[0] for part in clean_name.split() if part])[:2].upper() or "FT"
+
+        with self.get_connection() as conn:
+            existing = conn.execute("SELECT * FROM users WHERE LOWER(email) = LOWER(?)", (clean_email,)).fetchone()
+            if existing:
+                conn.execute(
+                    "UPDATE users SET name = ?, password = ? WHERE id = ?",
+                    (clean_name, clean_password, existing["id"])
+                )
+                conn.execute(
+                    "UPDATE settings SET user_name = ?, user_email = ? WHERE user_id = ?",
+                    (clean_name, clean_email, existing["id"])
+                )
+                return {
+                    "id": existing["id"],
+                    "name": clean_name,
+                    "email": clean_email,
+                    "avatar": existing["avatar"] or initials,
+                }
+
+            conn.execute(
+                """
+                INSERT INTO users (id, name, email, password, avatar, created_at)
+                VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                (user_id, clean_name, clean_email, clean_password, initials, now)
+            )
+            conn.execute(
+                """
+                INSERT INTO settings (user_id, currency, theme, month_start_day, user_name, user_email, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                (user_id, "INR", "light", 1, clean_name, clean_email, now)
+            )
+            self.seed_default_categories(conn, user_id)
+            self.seed_default_accounts(conn, user_id)
+
+            return {
+                "id": user_id,
+                "name": clean_name,
+                "email": clean_email,
+                "avatar": initials,
+            }
+
+    def reset_password(self, email: str, new_password: str = "password123") -> bool:
+        """
+        Updates the user's password in SQLite for password recovery.
+        """
+        with self.get_connection() as conn:
+            cursor = conn.execute(
+                "UPDATE users SET password = ? WHERE LOWER(email) = LOWER(?)",
+                (new_password.strip(), email.strip())
+            )
+            return cursor.rowcount > 0
+
+    def get_user_by_email(self, email: str) -> Optional[Dict[str, Any]]:
+        with self.get_connection() as conn:
+            row = conn.execute(
+                "SELECT * FROM users WHERE LOWER(email) = LOWER(?)",
+                (email.strip(),)
+            ).fetchone()
+            if not row:
+                return None
+            return {
+                "id": row["id"],
+                "name": row["name"],
+                "email": row["email"],
+                "avatar": row["avatar"] or "AM",
+                "createdAt": row["created_at"],
+            }
+

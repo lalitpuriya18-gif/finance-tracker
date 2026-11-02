@@ -59,15 +59,15 @@ export const LoginPage: React.FC = () => {
     }
   };
 
-  // Instant demo user login as Arjun Mehta
+  // Instant demo user login as Lalit Puriya (matching login screen spec)
   const handleDemoLogin = async () => {
     setIsSubmitting(true);
     setErrorMessage('');
-    setEmail('arjun@fintrack.io');
-    setName('Arjun Mehta');
-    setPassword('arjun2023');
+    setEmail('lalitpuriya@gmail.com');
+    setName('Lalit Puriya');
+    setPassword('password123');
     try {
-      await login('arjun@fintrack.io', 'arjun2023', 'Arjun Mehta');
+      await login('lalitpuriya@gmail.com', 'password123', 'Lalit Puriya');
       navigate('/', { replace: true });
     } finally {
       setIsSubmitting(false);
@@ -262,15 +262,15 @@ export const LoginPage: React.FC = () => {
                       </div>
                       <div>
                         <div className="flex items-center gap-1.5">
-                          <span className="text-xs font-bold text-slate-900 dark:text-white">
-                            Arjun Mehta
+                          <span className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+                            LALIT PURIYA
                           </span>
                           <span className="inline-block text-[9px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-300 bg-emerald-200/70 dark:bg-emerald-900/80 px-1.5 py-0.2 rounded">
-                            Demo User
+                            DEMO USER
                           </span>
                         </div>
                         <span className="text-[11px] text-slate-600 dark:text-slate-300 font-medium block">
-                          arjun@fintrack.io
+                          lalitpuriya@gmail.com
                         </span>
                       </div>
                     </div>

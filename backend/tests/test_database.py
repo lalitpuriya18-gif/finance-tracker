@@ -137,3 +137,30 @@ def test_settings_and_clear_all(db):
     # Clean starter accounts and categories preserved
     assert len(fresh["accounts"]) == len(DEFAULT_ACCOUNTS)
     assert len(fresh["categories"]) == len(DEFAULT_CATEGORIES)
+
+
+def test_user_authentication_and_registration(db):
+    # Verify Lalit Puriya is seeded
+    lalit = db.get_user_by_email("lalitpuriya@gmail.com")
+    assert lalit is not None
+    assert lalit["name"] == "Lalit Puriya"
+
+    # Authenticate seeded user
+    auth_lalit = db.authenticate_user("lalitpuriya@gmail.com", "password123")
+    assert auth_lalit is not None
+    assert auth_lalit["email"] == "lalitpuriya@gmail.com"
+
+    # Register new user
+    new_user = db.register_user("Rohan Verma", "rohan@example.com", "securePass99")
+    assert new_user["email"] == "rohan@example.com"
+
+    # Authenticate newly registered user
+    auth_new = db.authenticate_user("rohan@example.com", "securePass99")
+    assert auth_new is not None
+    assert auth_new["name"] == "Rohan Verma"
+
+    # Reset password
+    assert db.reset_password("rohan@example.com", "newSecretPass") is True
+    assert db.authenticate_user("rohan@example.com", "newSecretPass") is not None
+    assert db.authenticate_user("rohan@example.com", "wrongPass") is None
+

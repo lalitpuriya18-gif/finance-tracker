@@ -216,20 +216,156 @@ def create_app(db: Database = None) -> Flask:
 
     @app.route("/login", methods=["GET", "POST"])
     def page_login():
-        """Renders login page (GET) or authenticates user session (POST)."""
-        if request.method == "POST":
-            email = request.form.get("email", "").strip() or "arjun@fintrack.io"
-            name = request.form.get("name", "").strip() or ("Arjun Mehta" if "arjun" in email.lower() else email.split("@")[0])
-            session["logged_in"] = True
-            session["user_name"] = name
-            session["user_email"] = email
-            try:
-                app.db.update_settings({"userName": name, "userEmail": email})
-            except Exception:
-                pass
-            return redirect(url_for("page_dashboard"))
+        """Renders login page (GET) or authenticates user credentials (POST)."""
+        error = None
+        success = None
+        mode = request.args.get("mode", "login")
 
-        return render_template("login.html", default_email=session.get("user_email", "arjun@fintrack.io"))
+        if request.method == "POST":
+            action = request.form.get("action", "login")
+
+            # 1. Quick Login (Lalit Puriya demo user)
+            if action == "quick_login" or "quick_login" in request.form:
+                user = app.db.get_user_by_email("lalitpuriya@gmail.com")
+                if not user:
+                    user = app.db.register_user("Lalit Puriya", "lalitpuriya@gmail.com", "password123")
+                session["logged_in"] = True
+                session["user_id"] = user["id"]
+                session["user_name"] = user["name"]
+                session["user_email"] = user["email"]
+                try:
+                    app.db.update_settings({"userName": user["name"], "userEmail": user["email"]})
+                except Exception:
+                    pass
+                return redirect(url_for("page_dashboard"))
+
+            # 2. Google OAuth Simulation
+            if action == "google":
+                user = app.db.get_user_by_email("lalitpuriya@gmail.com")
+                if not user:
+                    user = app.db.register_user("Lalit Puriya", "lalitpuriya@gmail.com", "password123")
+                session["logged_in"] = True
+                session["user_id"] = user["id"]
+                session["user_name"] = user["name"]
+                session["user_email"] = user["email"]
+                try:
+                    app.db.update_settings({"userName": user["name"], "userEmail": user["email"]})
+                except Exception:
+                    pass
+                return redirect(url_for("page_dashboard"))
+
+            # 3. Registration (Create One)
+            if action == "register":
+                name = request.form.get("name", "").strip() or "FinTrack User"
+                email = request.form.get("email", "").strip().lower()
+                password = request.form.get("password", "").strip()
+                if not email or not password:
+                    return render_template(
+                        "login.html",
+                        error="Please provide an email and password to create an account.",
+                        mode="register",
+                        default_email=email,
+                        default_name=name,
+                    )
+                new_user = app.db.register_user(name, email, password)
+                session["logged_in"] = True
+                session["user_id"] = new_user["id"]
+                session["user_name"] = new_user["name"]
+                session["user_email"] = new_user["email"]
+                return redirect(url_for("page_dashboard"))
+
+            # 4. Forgot Password Recovery
+            if action == "forgot_password":
+                email = request.form.get("email", "").strip().lower()
+                new_password = request.form.get("new_password", "password123").strip()
+                if not email:
+                    return render_template("login.html", error="Please enter your email to reset password.", mode="forgot")
+                updated = app.db.reset_password(email, new_password)
+                if updated:
+                    return render_template("login.html", success=f"Password successfully reset to '{new_password}'! You may now sign in.", default_email=email, mode="login")
+                else:
+                    app.db.register_user(email.split("@")[0].title(), email, new_password)
+                    return render_template("login.html", success=f"Account recovered and password updated to '{new_password}'! You may now sign in.", default_email=email, mode="login")
+
+            # 5. Standard Credential Login
+            email = request.form.get("email", "").strip()
+            password = request.form.get("password", "").strip()
+            name = request.form.get("name", "").strip()
+
+            if not email:
+                return render_template("login.html", error="Please enter your email address.", default_email="", mode="login")
+
+            user = app.db.authenticate_user(email, password)
+            if user:
+                session["logged_in"] = True
+                session["user_id"] = user["id"]
+                session["user_name"] = user["name"]
+                session["user_email"] = user["email"]
+                try:
+                    app.db.update_settings({"userName": user["name"], "userEmail": user["email"]})
+                except Exception:
+                    pass
+                return redirect(url_for("page_dashboard"))
+            else:
+                existing = app.db.get_user_by_email(email)
+                if existing:
+                    return render_template(
+                        "login.html",
+                        error="Incorrect password. For demo accounts use password123, or click 'Forgot password?'.",
+                        default_email=email,
+                        mode="login",
+                    )
+                # Seamless onboarding for new user
+                user = app.db.register_user(name or email.split("@")[0].capitalize(), email, password or "password123")
+                session["logged_in"] = True
+                session["user_id"] = user["id"]
+                session["user_name"] = user["name"]
+                session["user_email"] = user["email"]
+                return redirect(url_for("page_dashboard"))
+
+        default_email = session.get("user_email", "arjun@fintrack.io")
+        return render_template("login.html", default_email=default_email, error=error, success=success, mode=mode)
+
+    @app.route("/register", methods=["POST"])
+    def form_register():
+        """Handles explicit registration form submission."""
+        name = request.form.get("name", "").strip() or "FinTrack User"
+        email = request.form.get("email", "").strip().lower()
+        password = request.form.get("password", "").strip() or "password123"
+        if not email:
+            return render_template("login.html", error="Email is required to register.", mode="register")
+        user = app.db.register_user(name, email, password)
+        session["logged_in"] = True
+        session["user_id"] = user["id"]
+        session["user_name"] = user["name"]
+        session["user_email"] = user["email"]
+        return redirect(url_for("page_dashboard"))
+
+    @app.route("/forgot-password", methods=["POST"])
+    def form_forgot_password():
+        """Handles password reset requests."""
+        email = request.form.get("email", "").strip().lower()
+        new_password = request.form.get("new_password", "password123").strip()
+        if not email:
+            return render_template("login.html", error="Email is required to reset password.", mode="forgot")
+        app.db.reset_password(email, new_password)
+        return render_template("login.html", success=f"Password for {email} reset successfully! Please sign in with your new password.", default_email=email, mode="login")
+
+    @app.route("/quick-login", methods=["POST"])
+    def form_quick_login():
+        """Instant one-click demo login as Lalit Puriya."""
+        user = app.db.get_user_by_email("lalitpuriya@gmail.com")
+        if not user:
+            user = app.db.register_user("Lalit Puriya", "lalitpuriya@gmail.com", "password123")
+        session["logged_in"] = True
+        session["user_id"] = user["id"]
+        session["user_name"] = user["name"]
+        session["user_email"] = user["email"]
+        try:
+            app.db.update_settings({"userName": user["name"], "userEmail": user["email"]})
+        except Exception:
+            pass
+        return redirect(url_for("page_dashboard"))
 
     @app.route("/logout", methods=["GET", "POST"])
     def page_logout():
@@ -434,7 +570,7 @@ def create_app(db: Database = None) -> Flask:
             return jsonify({"error": "Failed to retrieve bootstrap data", "details": str(e)}), 500
 
     # =========================================================================
-    # 3. AUTHENTICATION SIMULATION
+    # 3. AUTHENTICATION API
     # =========================================================================
 
     @app.route("/api/auth/login", methods=["POST"])
@@ -442,12 +578,46 @@ def create_app(db: Database = None) -> Flask:
         """Authenticates user credentials and returns user profile."""
         payload = request.get_json(silent=True) or request.form or {}
         email = payload.get("email", "").strip() or "arjun@fintrack.io"
+        password = payload.get("password", "").strip() or "password123"
         name = payload.get("name", "").strip() or ("Arjun Mehta" if "arjun" in email.lower() else email.split("@")[0])
+
+        auth_user = app.db.authenticate_user(email, password)
+        if not auth_user:
+            auth_user = app.db.register_user(name, email, password)
+
         session["logged_in"] = True
-        session["user_name"] = name
-        session["user_email"] = email
-        updated = app.db.update_settings({"userName": name, "userEmail": email})
-        return jsonify({"success": True, "user": updated, "message": f"Welcome back, {name}!"}), 200
+        session["user_id"] = auth_user["id"]
+        session["user_name"] = auth_user["name"]
+        session["user_email"] = auth_user["email"]
+        updated = app.db.update_settings({"userName": auth_user["name"], "userEmail": auth_user["email"]})
+        return jsonify({"success": True, "user": updated, "message": f"Welcome back, {auth_user['name']}!"}), 200
+
+    @app.route("/api/auth/register", methods=["POST"])
+    def api_register():
+        """Registers a new user account in SQLite."""
+        payload = request.get_json(silent=True) or request.form or {}
+        name = payload.get("name", "").strip() or "FinTrack User"
+        email = payload.get("email", "").strip().lower()
+        password = payload.get("password", "").strip() or "password123"
+        if not email:
+            return jsonify({"error": "Email is required"}), 400
+        user = app.db.register_user(name, email, password)
+        session["logged_in"] = True
+        session["user_id"] = user["id"]
+        session["user_name"] = user["name"]
+        session["user_email"] = user["email"]
+        return jsonify({"success": True, "user": user, "message": "Registered successfully"}), 201
+
+    @app.route("/api/auth/forgot-password", methods=["POST"])
+    def api_forgot_password():
+        """Resets a user password in SQLite."""
+        payload = request.get_json(silent=True) or request.form or {}
+        email = payload.get("email", "").strip().lower()
+        new_password = payload.get("new_password", "password123").strip()
+        if not email:
+            return jsonify({"error": "Email is required"}), 400
+        updated = app.db.reset_password(email, new_password)
+        return jsonify({"success": True, "updated": updated, "message": "Password reset processed"}), 200
 
     @app.route("/api/auth/google", methods=["POST"])
     def google_auth():
@@ -455,12 +625,16 @@ def create_app(db: Database = None) -> Flask:
         payload = request.get_json(silent=True) or {}
         name = payload.get("name") or "Arjun Mehta"
         email = payload.get("email") or "arjun@fintrack.io"
+        session["logged_in"] = True
+        session["user_name"] = name
+        session["user_email"] = email
         updated = app.db.update_settings({"userName": name, "userEmail": email})
         return jsonify({"success": True, "user": updated})
 
     @app.route("/api/auth/logout", methods=["POST"])
     def logout():
         """Clears user session."""
+        session.clear()
         return jsonify({"success": True, "message": "Logged out successfully"})
 
     # =========================================================================
