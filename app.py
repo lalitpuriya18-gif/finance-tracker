@@ -1,18 +1,3 @@
-"""
-==============================================================================
-FinTrack — Python (Flask) Backend & Web Application (Project Root)
-==============================================================================
-This is the main entry point for FinTrack, demonstrating:
-1. How Python (Flask) connects the HTML frontend (templates/) and CSS (static/).
-2. Semantic HTML Web Views (Dashboard, Transactions, Budgets, Goals, Reports, Accounts, Settings).
-3. Pure Python HTML Form Handlers (<form method="POST">) requiring ZERO client-side JavaScript.
-4. Direct SQLite database storage with thread-safe queries and data seeding.
-5. Automated Bank SMS / Email alert parsing engine with Wi-Fi webhook ingestion.
-
-Written with clear, beginner-friendly educational comments so any student or evaluator
-can understand and explain every function during an academic viva.
-==============================================================================
-"""
 
 import os
 import sys
@@ -41,11 +26,7 @@ START_TIME = time.time()
 
 
 def get_local_ip() -> str:
-    """
-    Finds the machine's local Wi-Fi / LAN IP address (e.g. 192.168.1.35)
-    using Python's standard socket library with 0 external packages.
-    Allows mobile phones on the same Wi-Fi to push webhook alerts directly to this PC.
-    """
+  
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
         s.connect(("8.8.8.8", 80))
@@ -58,10 +39,7 @@ def get_local_ip() -> str:
 
 
 def get_page_context(db: Database) -> dict:
-    """
-    Aggregates financial metrics and formats data for HTML Jinja2 templates.
-    Calculates total net worth, monthly income, expenses, budget limits, and category ratios.
-    """
+  
     data = db.get_full_bootstrap()
     accounts = data.get("accounts", [])
     categories = data.get("categories", [])
@@ -198,10 +176,7 @@ def get_page_context(db: Database) -> dict:
 
 
 def create_app(db: Database = None) -> Flask:
-    """
-    Application factory for FinTrack Flask server.
-    Configures template directories, static file hosting, and registers web + API routes.
-    """
+   
     # Prefer templates and static right in root if present, else fallback to backend/
     template_dir = str(ROOT_DIR / "templates") if (ROOT_DIR / "templates").exists() else str(ROOT_DIR / "backend" / "templates")
     static_dir = str(ROOT_DIR / "static") if (ROOT_DIR / "static").exists() else str(ROOT_DIR / "backend" / "static")
@@ -233,11 +208,12 @@ def create_app(db: Database = None) -> Flask:
         if request.method == "POST":
             action = request.form.get("action", "login")
 
-            # 1. Quick Login (Lalit Puriya demo user)
+            # 1. Quick Login (Arjun Mehta demo user matching screenshot)
             if action == "quick_login" or "quick_login" in request.form:
-                user = app.db.get_user_by_email("lalitpuriya@gmail.com")
+                email = request.form.get("email", "arjun@fintrack.io")
+                user = app.db.get_user_by_email(email)
                 if not user:
-                    user = app.db.register_user("Lalit Puriya", "lalitpuriya@gmail.com", "password123")
+                    user = app.db.register_user("Arjun Mehta", email, "password123")
                 session["logged_in"] = True
                 session["user_id"] = user["id"]
                 session["user_name"] = user["name"]
@@ -248,11 +224,12 @@ def create_app(db: Database = None) -> Flask:
                     pass
                 return redirect(url_for("page_dashboard"))
 
-            # 2. Google OAuth Simulation
+            # 2. Google OAuth Simulation (Login / Sign-up)
             if action == "google":
-                user = app.db.get_user_by_email("lalitpuriya@gmail.com")
+                email = request.form.get("email", "arjun@fintrack.io")
+                user = app.db.get_user_by_email(email)
                 if not user:
-                    user = app.db.register_user("Lalit Puriya", "lalitpuriya@gmail.com", "password123")
+                    user = app.db.register_user("Arjun Mehta", email, "google-oauth-password")
                 session["logged_in"] = True
                 session["user_id"] = user["id"]
                 session["user_name"] = user["name"]
@@ -360,12 +337,14 @@ def create_app(db: Database = None) -> Flask:
         app.db.reset_password(email, new_password)
         return render_template("login.html", success=f"Password for {email} reset successfully! Please sign in with your new password.", default_email=email, mode="login")
 
-    @app.route("/quick-login", methods=["POST"])
+    @app.route("/quick-login", methods=["GET", "POST"])
     def form_quick_login():
-        """Instant one-click demo login as Lalit Puriya."""
-        user = app.db.get_user_by_email("lalitpuriya@gmail.com")
+        """Instant one-click demo login (supports Arjun Mehta or custom demo user)."""
+        email = request.form.get("email") or request.args.get("email") or "arjun@fintrack.io"
+        user = app.db.get_user_by_email(email)
         if not user:
-            user = app.db.register_user("Lalit Puriya", "lalitpuriya@gmail.com", "password123")
+            name = "Lalit Puriya" if "lalit" in email.lower() else "Arjun Mehta"
+            user = app.db.register_user(name, email, "password123")
         session["logged_in"] = True
         session["user_id"] = user["id"]
         session["user_name"] = user["name"]
@@ -375,6 +354,34 @@ def create_app(db: Database = None) -> Flask:
         except Exception:
             pass
         return redirect(url_for("page_dashboard"))
+
+    @app.route("/auth/google", methods=["GET", "POST"])
+    def form_google_auth():
+        """Handles Google 1-Click Login and Sign-Up."""
+        email = request.form.get("email") or request.args.get("email") or "arjun@fintrack.io"
+        name = request.form.get("name") or request.args.get("name") or "Arjun Mehta"
+        user = app.db.get_user_by_email(email)
+        if not user:
+            user = app.db.register_user(name, email, "google-oauth-password")
+        session["logged_in"] = True
+        session["user_id"] = user["id"]
+        session["user_name"] = user["name"]
+        session["user_email"] = user["email"]
+        try:
+            app.db.update_settings({"userName": user["name"], "userEmail": user["email"]})
+        except Exception:
+            pass
+        return redirect(url_for("page_dashboard"))
+
+    @app.route("/signup", methods=["GET", "POST"])
+    def page_signup():
+        """Renders sign-up page (GET) or processes account registration (POST)."""
+        if request.method == "POST":
+            action = request.form.get("action", "register")
+            if action == "google":
+                return form_google_auth()
+            return form_register()
+        return render_template("login.html", mode="register", default_email="")
 
     @app.route("/logout", methods=["GET", "POST"])
     def page_logout():

@@ -132,12 +132,18 @@ def test_page_logout(client):
     assert "Sign In" in html
 
 
-def test_page_quick_login_lalit(client):
-    """Verifies one-click demo login as Lalit Puriya."""
+def test_page_quick_login(client):
+    """Verifies one-click demo login matching screenshot (Arjun Mehta) and custom demo."""
     res = client.post("/quick-login", follow_redirects=True)
     assert res.status_code == 200
     html = res.get_data(as_text=True)
-    assert "Lalit Puriya" in html
+    assert "Arjun Mehta" in html
+
+    # Also supports explicit user
+    res_lalit = client.post("/quick-login", data={"email": "lalitpuriya@gmail.com"}, follow_redirects=True)
+    assert res_lalit.status_code == 200
+    assert "Lalit Puriya" in res_lalit.get_data(as_text=True)
+
 
 
 def test_page_register_and_forgot_password(client):

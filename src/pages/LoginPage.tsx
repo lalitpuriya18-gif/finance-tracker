@@ -59,15 +59,15 @@ export const LoginPage: React.FC = () => {
     }
   };
 
-  // Instant demo user login as Lalit Puriya (matching login screen spec)
+  // Instant demo user login as Arjun Mehta (matching login screen spec)
   const handleDemoLogin = async () => {
     setIsSubmitting(true);
     setErrorMessage('');
-    setEmail('lalitpuriya@gmail.com');
-    setName('Lalit Puriya');
+    setEmail('arjun@fintrack.io');
+    setName('Arjun Mehta');
     setPassword('password123');
     try {
-      await login('lalitpuriya@gmail.com', 'password123', 'Lalit Puriya');
+      await login('arjun@fintrack.io', 'password123', 'Arjun Mehta');
       navigate('/', { replace: true });
     } finally {
       setIsSubmitting(false);
@@ -262,15 +262,15 @@ export const LoginPage: React.FC = () => {
                       </div>
                       <div>
                         <div className="flex items-center gap-1.5">
-                          <span className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
-                            LALIT PURIYA
+                          <span className="text-xs font-bold text-slate-900 dark:text-white">
+                            Arjun Mehta
                           </span>
                           <span className="inline-block text-[9px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-300 bg-emerald-200/70 dark:bg-emerald-900/80 px-1.5 py-0.2 rounded">
                             DEMO USER
                           </span>
                         </div>
                         <span className="text-[11px] text-slate-600 dark:text-slate-300 font-medium block">
-                          lalitpuriya@gmail.com
+                          arjun@fintrack.io
                         </span>
                       </div>
                     </div>
@@ -311,11 +311,12 @@ export const LoginPage: React.FC = () => {
                 <span>Continue with Google</span>
               </button>
 
-              <div className="relative flex items-center justify-center">
-                <div className="border-t border-slate-200 dark:border-slate-800 w-full"></div>
-                <span className="bg-white dark:bg-slate-900 px-3 text-[11px] font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">
-                  or with email
-                </span>
+              <div className="flex items-center gap-3">
+                <div className="border-t border-slate-200 dark:border-slate-800 flex-1"></div>
+                <div className="flex flex-col text-right text-[10px] font-extrabold text-slate-600 dark:text-slate-400 uppercase tracking-wider leading-tight">
+                  <span>OR WITH</span>
+                  <span>EMAIL</span>
+                </div>
               </div>
 
               {/* Error Alert */}

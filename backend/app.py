@@ -224,11 +224,12 @@ def create_app(db: Database = None) -> Flask:
         if request.method == "POST":
             action = request.form.get("action", "login")
 
-            # 1. Quick Login (Lalit Puriya demo user)
+            # 1. Quick Login (Arjun Mehta demo user matching screenshot)
             if action == "quick_login" or "quick_login" in request.form:
-                user = app.db.get_user_by_email("lalitpuriya@gmail.com")
+                email = request.form.get("email", "arjun@fintrack.io")
+                user = app.db.get_user_by_email(email)
                 if not user:
-                    user = app.db.register_user("Lalit Puriya", "lalitpuriya@gmail.com", "password123")
+                    user = app.db.register_user("Arjun Mehta", email, "password123")
                 session["logged_in"] = True
                 session["user_id"] = user["id"]
                 session["user_name"] = user["name"]
@@ -239,11 +240,12 @@ def create_app(db: Database = None) -> Flask:
                     pass
                 return redirect(url_for("page_dashboard"))
 
-            # 2. Google OAuth Simulation
+            # 2. Google OAuth Simulation (Login / Sign-up)
             if action == "google":
-                user = app.db.get_user_by_email("lalitpuriya@gmail.com")
+                email = request.form.get("email", "arjun@fintrack.io")
+                user = app.db.get_user_by_email(email)
                 if not user:
-                    user = app.db.register_user("Lalit Puriya", "lalitpuriya@gmail.com", "password123")
+                    user = app.db.register_user("Arjun Mehta", email, "google-oauth-password")
                 session["logged_in"] = True
                 session["user_id"] = user["id"]
                 session["user_name"] = user["name"]
@@ -351,12 +353,14 @@ def create_app(db: Database = None) -> Flask:
         app.db.reset_password(email, new_password)
         return render_template("login.html", success=f"Password for {email} reset successfully! Please sign in with your new password.", default_email=email, mode="login")
 
-    @app.route("/quick-login", methods=["POST"])
+    @app.route("/quick-login", methods=["GET", "POST"])
     def form_quick_login():
-        """Instant one-click demo login as Lalit Puriya."""
-        user = app.db.get_user_by_email("lalitpuriya@gmail.com")
+        """Instant one-click demo login (supports Arjun Mehta or custom demo user)."""
+        email = request.form.get("email") or request.args.get("email") or "arjun@fintrack.io"
+        user = app.db.get_user_by_email(email)
         if not user:
-            user = app.db.register_user("Lalit Puriya", "lalitpuriya@gmail.com", "password123")
+            name = "Lalit Puriya" if "lalit" in email.lower() else "Arjun Mehta"
+            user = app.db.register_user(name, email, "password123")
         session["logged_in"] = True
         session["user_id"] = user["id"]
         session["user_name"] = user["name"]
@@ -366,6 +370,34 @@ def create_app(db: Database = None) -> Flask:
         except Exception:
             pass
         return redirect(url_for("page_dashboard"))
+
+    @app.route("/auth/google", methods=["GET", "POST"])
+    def form_google_auth():
+        """Handles Google 1-Click Login and Sign-Up."""
+        email = request.form.get("email") or request.args.get("email") or "arjun@fintrack.io"
+        name = request.form.get("name") or request.args.get("name") or "Arjun Mehta"
+        user = app.db.get_user_by_email(email)
+        if not user:
+            user = app.db.register_user(name, email, "google-oauth-password")
+        session["logged_in"] = True
+        session["user_id"] = user["id"]
+        session["user_name"] = user["name"]
+        session["user_email"] = user["email"]
+        try:
+            app.db.update_settings({"userName": user["name"], "userEmail": user["email"]})
+        except Exception:
+            pass
+        return redirect(url_for("page_dashboard"))
+
+    @app.route("/signup", methods=["GET", "POST"])
+    def page_signup():
+        """Renders sign-up page (GET) or processes account registration (POST)."""
+        if request.method == "POST":
+            action = request.form.get("action", "register")
+            if action == "google":
+                return form_google_auth()
+            return form_register()
+        return render_template("login.html", mode="register", default_email="")
 
     @app.route("/logout", methods=["GET", "POST"])
     def page_logout():
