@@ -32,6 +32,15 @@ export const LoginPage: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
+  // Google Account Chooser state (connected to SQLite database)
+  const [showGoogleChooser, setShowGoogleChooser] = useState(false);
+  const [customGoogleEmail, setCustomGoogleEmail] = useState('');
+  const [customGoogleName, setCustomGoogleName] = useState('');
+  const [googleAccounts, setGoogleAccounts] = useState<Array<{ name: string; email: string; avatar?: string }>>([
+    { name: 'Arjun Mehta', email: 'arjun@fintrack.io', avatar: 'AM' },
+    { name: 'Lalit Puriya', email: 'lalitpuriya@gmail.com', avatar: 'LP' },
+  ]);
+
   // Handle standard credential submit
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -74,11 +83,29 @@ export const LoginPage: React.FC = () => {
     }
   };
 
-  // Google OAuth simulation
-  const handleGoogleLogin = async () => {
+  // Opens the Google Account Chooser and fetches accounts from SQLite database
+  const handleGoogleLogin = () => {
+    setShowGoogleChooser(true);
+    fetch('/api/auth/users')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.users && data.users.length > 0) {
+          const filtered = data.users.filter((u: any) => u.email !== 'user@fintrack.io');
+          if (filtered.length > 0) {
+            setGoogleAccounts(filtered);
+          }
+        }
+      })
+      .catch(() => {});
+  };
+
+  // Connects chosen Google email with the backend database
+  const handleSelectGoogleAccount = async (selectedEmail: string, selectedName?: string) => {
     setIsSubmitting(true);
     try {
-      await login('arjun.mehta@gmail.com', 'google-oauth-session', 'Arjun Mehta');
+      const finalName = selectedName || selectedEmail.split('@')[0].replace('.', ' ').replace('_', ' ');
+      await login(selectedEmail, 'google-oauth-session', finalName);
+      setShowGoogleChooser(false);
       navigate('/', { replace: true });
     } finally {
       setIsSubmitting(false);
@@ -475,6 +502,104 @@ export const LoginPage: React.FC = () => {
       <footer className="w-full max-w-7xl mx-auto px-6 py-5 text-center text-[11px] text-slate-600 dark:text-slate-300">
         FinTrack Wealth OS &copy; {new Date().getFullYear()} &bull; Built with React, TypeScript &amp; Python Flask
       </footer>
+
+      {/* Google Account Chooser Modal (Connected to Database) */}
+      {showGoogleChooser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="bg-white dark:bg-slate-900 w-full max-w-md rounded-3xl p-6 sm:p-7 shadow-2xl border border-slate-200 dark:border-slate-800 animate-in zoom-in-95 duration-150">
+            {/* Google Logo */}
+            <div className="flex justify-center mb-3">
+              <svg width="36" height="36" viewBox="0 0 24 24">
+                <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.8-2.4 3.65v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.14z"/>
+                <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.33 24 12 24z"/>
+                <path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 10.03 0 12s.45 3.82 1.25 5.42l4.03-3.15z"/>
+                <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/>
+              </svg>
+            </div>
+
+            <h3 className="text-xl font-bold text-slate-900 dark:text-white text-center">
+              Choose an account
+            </h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 text-center mb-5">
+              to continue to <span className="font-semibold text-emerald-600 dark:text-emerald-400">FinTrack</span>
+            </p>
+
+            {/* List of accounts in SQLite database */}
+            <div className="space-y-2 mb-4 max-h-56 overflow-y-auto">
+              {googleAccounts.map((acc) => (
+                <button
+                  key={acc.email}
+                  type="button"
+                  onClick={() => handleSelectGoogleAccount(acc.email, acc.name)}
+                  className="w-full flex items-center gap-3 p-3 rounded-2xl border border-slate-200 dark:border-slate-800 hover:border-emerald-500 hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-all text-left"
+                >
+                  <div className="w-10 h-10 rounded-full bg-emerald-600 flex items-center justify-center text-white font-bold text-sm shrink-0">
+                    {acc.avatar || acc.name.substring(0, 2).toUpperCase()}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-semibold text-slate-900 dark:text-white truncate">
+                      {acc.name}
+                    </div>
+                    <div className="text-xs text-slate-500 dark:text-slate-400 truncate">
+                      {acc.email}
+                    </div>
+                  </div>
+                  <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-full shrink-0">
+                    Database
+                  </span>
+                </button>
+              ))}
+            </div>
+
+            {/* Use another Google account input */}
+            <div className="border-t border-slate-100 dark:border-slate-800 pt-4">
+              <span className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-2">
+                Use another Google email to login / sign up:
+              </span>
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (customGoogleEmail) {
+                    handleSelectGoogleAccount(customGoogleEmail, customGoogleName);
+                  }
+                }}
+                className="space-y-2"
+              >
+                <input
+                  type="email"
+                  value={customGoogleEmail}
+                  onChange={(e) => setCustomGoogleEmail(e.target.value)}
+                  placeholder="Enter your Google email (e.g. name@gmail.com)"
+                  required
+                  className="w-full h-10 px-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm text-slate-900 dark:text-white focus:outline-hidden focus:border-emerald-600"
+                />
+                <input
+                  type="text"
+                  value={customGoogleName}
+                  onChange={(e) => setCustomGoogleName(e.target.value)}
+                  placeholder="Full Name (optional)"
+                  className="w-full h-10 px-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm text-slate-900 dark:text-white focus:outline-hidden focus:border-emerald-600"
+                />
+                <div className="flex justify-end gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowGoogleChooser(false)}
+                    className="px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-xs"
+                  >
+                    Continue &rarr;
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

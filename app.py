@@ -357,12 +357,30 @@ def create_app(db: Database = None) -> Flask:
 
     @app.route("/auth/google", methods=["GET", "POST"])
     def form_google_auth():
-        """Handles Google 1-Click Login and Sign-Up."""
-        email = request.form.get("email") or request.args.get("email") or "arjun@fintrack.io"
-        name = request.form.get("name") or request.args.get("name") or "Arjun Mehta"
+        """
+        Handles Google Login and Sign-Up connected directly to SQLite database:
+        - GET: Renders Google Account Chooser screen listing stored accounts + custom email input.
+        - POST: Authenticates or registers the chosen Google email in SQLite and redirects to dashboard.
+        """
+        if request.method == "GET":
+            users = app.db.get_all_users()
+            return render_template("google_auth.html", users=users)
+
+        email = request.form.get("email") or request.args.get("email")
+        if not email:
+            # If submitted without email, open Google Account Chooser
+            users = app.db.get_all_users()
+            return render_template("google_auth.html", users=users)
+
+        name = request.form.get("name") or request.args.get("name")
+        if not name:
+            clean_part = email.split("@")[0].replace(".", " ").replace("_", " ").title()
+            name = clean_part if clean_part else "FinTrack User"
+
         user = app.db.get_user_by_email(email)
         if not user:
             user = app.db.register_user(name, email, "google-oauth-password")
+
         session["logged_in"] = True
         session["user_id"] = user["id"]
         session["user_name"] = user["name"]
@@ -638,15 +656,34 @@ def create_app(db: Database = None) -> Flask:
 
     @app.route("/api/auth/google", methods=["POST"])
     def google_auth():
-        """Simulates Google OAuth session and updates user profile in database."""
+        """Connects Google OAuth with SQLite database and returns user profile."""
         payload = request.get_json(silent=True) or request.form or {}
-        name = payload.get("name") or "Arjun Mehta"
         email = payload.get("email") or "arjun@fintrack.io"
+        name = payload.get("name") or (email.split("@")[0].replace(".", " ").title() if "@" in email else "FinTrack User")
+        user = app.db.get_user_by_email(email)
+        if not user:
+            user = app.db.register_user(name, email, "google-oauth-password")
         session["logged_in"] = True
-        session["user_name"] = name
-        session["user_email"] = email
-        updated = app.db.update_settings({"userName": name, "userEmail": email})
-        return jsonify({"success": True, "user": updated}), 200
+        session["user_id"] = user["id"]
+        session["user_name"] = user["name"]
+        session["user_email"] = user["email"]
+        updated = app.db.update_settings({"userName": user["name"], "userEmail": user["email"]})
+        return jsonify({
+            "success": True,
+            "user": updated or {"userName": user["name"], "userEmail": user["email"]},
+            "profile": {
+                "id": user["id"],
+                "name": user["name"],
+                "email": user["email"],
+                "avatar": user.get("avatar") or "AM"
+            }
+        }), 200
+
+    @app.route("/api/auth/users", methods=["GET"])
+    def list_auth_users():
+        """Returns all registered users in SQLite for Google account picker."""
+        users = app.db.get_all_users()
+        return jsonify({"success": True, "users": users}), 200
 
     @app.route("/api/auth/logout", methods=["POST"])
     def api_logout():

@@ -1,0 +1,97 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign in with Google &bull; FinTrack</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body class="google-auth-body">
+
+  <main class="google-auth-card">
+
+    <!-- Google 4-Color Logo -->
+    <div class="google-logo-wrap">
+      <svg width="40" height="40" viewBox="0 0 24 24">
+        <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.8-2.4 3.65v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.14z"/>
+        <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.33 24 12 24z"/>
+        <path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 10.03 0 12s.45 3.82 1.25 5.42l4.03-3.15z"/>
+        <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/>
+      </svg>
+    </div>
+
+    <!-- Screen Title & Subtitle -->
+    <h1 class="google-auth-heading">Choose an account</h1>
+    <p class="google-auth-subheading">to continue to <strong class="google-brand-highlight">FinTrack</strong></p>
+
+    <!-- 1. Stored Accounts in SQLite Database -->
+    <div class="google-account-list">
+      {% for u in users %}
+        {% if u.email != 'user@fintrack.io' %}
+          <form method="POST" action="/auth/google" class="google-account-form">
+            <input type="hidden" name="email" value="{{ u.email }}">
+            <input type="hidden" name="name" value="{{ u.name }}">
+            <button type="submit" class="google-account-row">
+              <div class="google-avatar-circle">
+                {{ u.avatar }}
+              </div>
+              <div class="google-account-info">
+                <span class="google-account-name">{{ u.name }}</span>
+                <span class="google-account-email">{{ u.email }}</span>
+              </div>
+              <span class="google-account-badge">SQLite Stored</span>
+            </button>
+          </form>
+        {% endif %}
+      {% endfor %}
+    </div>
+
+    <!-- 2. Use Another Account (Enter any email to Login or Sign Up) -->
+    <div class="google-custom-section">
+      <div class="google-section-title">
+        <svg class="google-section-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+          <circle cx="9" cy="7" r="4"></circle>
+          <line x1="19" y1="8" x2="19" y2="14"></line>
+          <line x1="22" y1="11" x2="16" y2="11"></line>
+        </svg>
+        <span>Use another Google account</span>
+      </div>
+
+      <form method="POST" action="/auth/google" class="google-custom-form">
+        <div class="google-field">
+          <label for="google-email" class="google-label">Choose your Google Email (Login or Sign-Up)</label>
+          <input type="email" id="google-email" name="email" class="google-input" placeholder="e.g. name@gmail.com" required>
+        </div>
+
+        <div class="google-field">
+          <label for="google-name" class="google-label">Account Name (Optional for new users)</label>
+          <input type="text" id="google-name" name="name" class="google-input" placeholder="e.g. Arjun Mehta">
+        </div>
+
+        <div class="google-form-actions">
+          <a href="/login" class="google-btn-secondary">Cancel</a>
+          <button type="submit" class="google-btn-primary">Continue with this Account &rarr;</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- 3. Trust & Security Footer -->
+    <div class="google-auth-footer">
+      <p class="google-footer-disclaimer">
+        To continue, Google will share your name, email address, language preference, and profile picture with FinTrack.
+      </p>
+      <div class="google-footer-links">
+        <a href="/login">&larr; Return to FinTrack Login</a>
+        <span class="google-footer-separator">&bull;</span>
+        <span>256-Bit Bank Simulation</span>
+      </div>
+    </div>
+
+  </main>
+
+</body>
+</html>

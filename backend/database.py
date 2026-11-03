@@ -989,3 +989,25 @@ class Database:
                 "createdAt": row["created_at"],
             }
 
+    def get_all_users(self) -> List[Dict[str, Any]]:
+        """
+        Retrieves all registered users from SQLite.
+        Used for Google Account Chooser and profile switching.
+        """
+        with self.get_connection() as conn:
+            rows = conn.execute(
+                "SELECT id, name, email, avatar, created_at FROM users ORDER BY created_at ASC"
+            ).fetchall()
+            users = []
+            for r in rows:
+                name = r["name"]
+                initials = "".join([part[0] for part in name.split() if part])[:2].upper() or "FT"
+                users.append({
+                    "id": r["id"],
+                    "name": name,
+                    "email": r["email"],
+                    "avatar": r["avatar"] or initials,
+                    "createdAt": r["created_at"],
+                })
+            return users
+

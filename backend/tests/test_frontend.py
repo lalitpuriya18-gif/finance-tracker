@@ -177,3 +177,39 @@ def test_page_register_and_forgot_password(client):
     assert "Sameer Joshi" in login_res.get_data(as_text=True)
 
 
+def test_google_auth_chooser_and_custom_email_login_signup(client):
+    """Verifies that Google auth renders account chooser and connects chosen email to SQLite."""
+    # 1. GET /auth/google displays Google Account Chooser screen with stored users
+    res = client.get("/auth/google")
+    assert res.status_code == 200
+    html = res.get_data(as_text=True)
+    assert "Choose an account" in html
+    assert "FinTrack" in html
+    assert "Arjun Mehta" in html
+    assert "Use another Google account" in html
+
+    # 2. Select existing Google account (e.g. Lalit Puriya)
+    login_existing = client.post("/auth/google", data={
+        "email": "lalitpuriya@gmail.com",
+        "name": "Lalit Puriya",
+    }, follow_redirects=True)
+    assert login_existing.status_code == 200
+    assert "Lalit Puriya" in login_existing.get_data(as_text=True)
+
+    # 3. Choose a brand new Google email to sign up in SQLite
+    new_email = "rohit.sharma@gmail.com"
+    signup_google = client.post("/auth/google", data={
+        "email": new_email,
+        "name": "Rohit Sharma",
+    }, follow_redirects=True)
+    assert signup_google.status_code == 200
+    assert "Rohit Sharma" in signup_google.get_data(as_text=True)
+
+    # 4. Verify user was persisted into SQLite database
+    users_api = client.get("/api/auth/users")
+    assert users_api.status_code == 200
+    all_users = users_api.get_json()["users"]
+    user_emails = [u["email"] for u in all_users]
+    assert new_email in user_emails
+
+
