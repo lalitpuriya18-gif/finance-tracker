@@ -29,7 +29,8 @@ CATEGORY_KEYWORD_RULES = [
         [
             "swiggy", "zomato", "starbucks", "mcdonald", "burger king", "kfc",
             "domino", "pizza", "blinkit", "zepto", "instamart", "cafe", "coffee",
-            "restaurant", "bistro", "diner", "bakery", "subway", "haldiram"
+            "restaurant", "bistro", "diner", "bakery", "subway", "haldiram",
+            "sodexo", "pluxee", "zeta", "meal card"
         ]
     ),
     # Transport & Commute

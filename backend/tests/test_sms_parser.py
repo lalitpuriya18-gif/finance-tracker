@@ -134,3 +134,16 @@ def test_api_sms_parser_and_confirm(client):
     ledger_items = ledger_res.get_json()
     assert len(ledger_items) == 1
     assert ledger_items[0]["amount"] == 650.0
+
+
+def test_parse_sodexo_meal_card_sms():
+    """Verifies that corporate meal card (Sodexo/Pluxee) SMS is auto-parsed and categorized to Food."""
+    sms = "Paid Rs. 320.00 at CAFE COFFEE DAY using SODEXO Card ending with 5510 on 01-NOV-23."
+    accounts = [{"id": "acc-sodexo", "accountNumber": "..5510"}]
+    res = parse_single_sms(sms, accounts)
+    assert res is not None
+    assert res["amount"] == 320.0
+    assert res["type"] == "expense"
+    assert res["categoryId"] == "cat-food"
+    assert res["accountId"] == "acc-sodexo"
+
